@@ -59,6 +59,13 @@
       return decodeURIComponent(escape(atob(cleanStr)));
     },
 
+    getAuthHeader(pat) {
+      const clean = (pat || '').trim();
+      if (clean.startsWith('Bearer ') || clean.startsWith('token ')) return clean;
+      if (clean.startsWith('ghp_')) return `token ${clean}`;
+      return `Bearer ${clean}`;
+    },
+
     async fetchFile() {
       const cfg = this.getConfig();
 
@@ -73,7 +80,7 @@
       const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${cfg.pat}`,
+          'Authorization': this.getAuthHeader(cfg.pat),
           'Accept': 'application/vnd.github.v3+json',
           'Cache-Control': 'no-cache'
         }
@@ -81,7 +88,7 @@
 
       if (!response.ok) {
         if (response.status === 404) throw new Error(`Soubor '${cfg.path}' nebyl v repozitáři nalezen.`);
-        if (response.status === 401) throw new Error('Neplatný Personal Access Token (PAT).');
+        if (response.status === 401) throw new Error('Neplatný Personal Access Token (PAT). Zkontrolujte zadaný token.');
         throw new Error(`GitHub API chyba: ${response.status} ${response.statusText}`);
       }
 
@@ -105,7 +112,7 @@
       if (!currentSha) {
         const getRes = await fetch(getUrl, {
           headers: {
-            'Authorization': `Bearer ${cfg.pat}`,
+            'Authorization': this.getAuthHeader(cfg.pat),
             'Accept': 'application/vnd.github.v3+json'
           }
         });
@@ -127,7 +134,7 @@
       const putRes = await fetch(getUrl, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${cfg.pat}`,
+          'Authorization': this.getAuthHeader(cfg.pat),
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json'
         },
@@ -642,7 +649,7 @@
       const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${cfg.pat}`,
+          'Authorization': GitHubAPI.getAuthHeader(cfg.pat),
           'Accept': 'application/vnd.github.v3+json'
         }
       });
@@ -651,7 +658,7 @@
         showSettingsStatus('✅ Připojení úspěšné! Repozitář a soubor jsou přístupné s právy pro zápis.', 'success');
       } else {
         const errJson = await response.json().catch(() => ({}));
-        showSettingsStatus(`❌ Test selhal: ${errJson.message || response.statusText}`, 'error');
+        showSettingsStatus(`❌ Test selhal: ${errJson.message || response.statusText} (HTTP ${response.status})`, 'error');
       }
     } catch (err) {
       showSettingsStatus(`❌ Test selhal: ${err.message}`, 'error');
