@@ -1,0 +1,19 @@
+{
+  "name": "Captain Vocab - Německá Slovíčka",
+  "short_name": "Captain Vocab",
+  "description": "Bezserverová PWA aplikace pro výuku německých slovíček s GitHub API backendem",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

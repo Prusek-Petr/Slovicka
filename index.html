@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Captain Vocab - Bezserverová PWA aplikace pro výuku německých slovíček s GitHub API backendem">
+  
+  <title>Captain Vocab - Německá Slovíčka</title>
+  
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- Top Navigation & Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <img src="./icon.svg" alt="Captain Vocab Shield" class="shield-icon">
+        <div class="logo-text">
+          <span class="brand-title">CAPTAIN VOCAB</span>
+          <span class="brand-sub">Němčina 400</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div id="sync-status" class="sync-badge sync-offline" title="Stav synchronizace s GitHub API">
+        <span class="sync-dot"></span>
+        <span id="sync-text" class="sync-label">Nepřipojeno</span>
+      </div>
+      <button id="btn-open-settings" class="icon-btn" title="Nastavení GitHub API">
+        ⚙️
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="app-nav">
+    <button class="nav-btn active" data-tab="tab-practice">
+      <span class="nav-icon">🎴</span>
+      <span class="nav-label">Kartičky</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-list">
+      <span class="nav-icon">📚</span>
+      <span class="nav-label">Slovíčka</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-stats">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Statistiky</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-grammar">
+      <span class="nav-icon">📖</span>
+      <span class="nav-label">Gramatika</span>
+    </button>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="app-main">
+
+    <!-- TAB 1: PRACTICE / FLASHCARDS -->
+    <section id="tab-practice" class="tab-content active">
+      <!-- Filter & Progress Bar Header -->
+      <div class="practice-controls">
+        <div class="select-group">
+          <label for="practice-lesson-select">Lekce:</label>
+          <select id="practice-lesson-select" class="custom-select">
+            <option value="ALL">Všechny lekce</option>
+          </select>
+        </div>
+
+        <div class="select-group">
+          <label for="practice-filter-select">Filtr:</label>
+          <select id="practice-filter-select" class="custom-select">
+            <option value="ALL">Všechna slovíčka</option>
+            <option value="UNLEARNED" selected>Nenaučená (0x)</option>
+            <option value="LEARNED">Probraná (1x+)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="practice-progress-container">
+        <div class="progress-bar">
+          <div id="practice-progress-fill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="progress-info">
+          <span id="practice-count">Karta 0 z 0</span>
+          <span id="practice-percent">0 %</span>
+        </div>
+      </div>
+
+      <!-- Flashcard Area -->
+      <div id="flashcard-wrapper" class="flashcard-wrapper">
+        <div id="flashcard" class="flashcard">
+          <!-- Card Front -->
+          <div class="card-face card-front">
+            <div class="card-header">
+              <span id="card-lesson-tag" class="lesson-tag">Lekce</span>
+              <button id="btn-speak" class="speak-btn" title="Přečíst německy">🔊</button>
+            </div>
+            
+            <div class="card-body">
+              <h2 id="card-german" class="german-word">Wort</h2>
+              <p id="card-pronunciation" class="pronunciation">[výslovnost]</p>
+            </div>
+
+            <div id="card-story-box" class="story-box">
+              <span class="story-title">💡 Mnemotechnická pomůcka:</span>
+              <p id="card-story" class="story-text">-</p>
+            </div>
+
+            <div class="card-footer">
+              <span class="flip-hint">👆 Klikni pro otočení překladu</span>
+            </div>
+          </div>
+
+          <!-- Card Back -->
+          <div class="card-face card-back">
+            <div class="card-header">
+              <span class="translation-title">Český překlad</span>
+              <span id="card-rep-badge" class="rep-badge">0x</span>
+            </div>
+
+            <div class="card-body">
+              <h2 id="card-czech" class="czech-word">Slovo</h2>
+              <p id="card-last-reviewed" class="last-reviewed">Poslední revize: -</p>
+            </div>
+
+            <div class="card-footer">
+              <span class="flip-hint">👆 Klikni pro zpětné otočení</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="practice-actions">
+        <button id="btn-dont-know" class="action-btn btn-wrong">
+          <span class="btn-icon">❌</span>
+          <span class="btn-label">Nevím</span>
+        </button>
+        <button id="btn-flip" class="action-btn btn-flip-action">
+          <span class="btn-icon">🔄</span>
+          <span class="btn-label">Otočit</span>
+        </button>
+        <button id="btn-know" class="action-btn btn-correct">
+          <span class="btn-icon">✅</span>
+          <span class="btn-label">Vím</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- TAB 2: VOCABULARY LIST / CRUD -->
+    <section id="tab-list" class="tab-content">
+      <div class="list-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="list-search-input" placeholder="Hledat v němečtině i češtině..." class="custom-input">
+        </div>
+
+        <div class="toolbar-actions">
+          <select id="list-lesson-filter" class="custom-select">
+            <option value="ALL">Všechny lekce</option>
+          </select>
+          <button id="btn-add-word" class="btn-primary">
+            ➕ Přidat slovíčko
+          </button>
+        </div>
+      </div>
+
+      <div class="list-stats-bar">
+        <span id="list-counter">Zobrazeno 0 z 400 slovíček</span>
+      </div>
+
+      <div class="table-container">
+        <table class="vocab-table">
+          <thead>
+            <tr>
+              <th>Německy</th>
+              <th>Výslovnost</th>
+              <th>Česky</th>
+              <th>Opakování</th>
+              <th>Lekce</th>
+              <th>Akce</th>
+            </tr>
+          </thead>
+          <tbody id="vocab-table-body">
+            <!-- Rows rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <!-- TAB 3: STATISTICS & PROGRESS -->
+    <section id="tab-stats" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📚</div>
+          <div class="stat-val" id="stat-total">400</div>
+          <div class="stat-label">Celkem slovíček</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🌟</div>
+          <div class="stat-val" id="stat-learned">0</div>
+          <div class="stat-label">Probraných (1x+)</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-val" id="stat-mastery">0 %</div>
+          <div class="stat-label">Míra naučení</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🔄</div>
+          <div class="stat-val" id="stat-unlearned">400</div>
+          <div class="stat-label">Zbývá k probrání</div>
+        </div>
+      </div>
+
+      <div class="stats-detail-card">
+        <h3>Přehled po lekcích</h3>
+        <div id="lessons-breakdown" class="lessons-breakdown">
+          <!-- Breakdown bars rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+
+    <!-- TAB 4: GRAMMAR -->
+    <section id="tab-grammar" class="tab-content">
+      <div class="grammar-container">
+        <h2>Německá Gramatika - Přehled</h2>
+
+        <div class="grammar-card">
+          <h3>1. Členy (der, die, das)</h3>
+          <p>Německá podstatná jména mají 3 rody:</p>
+          <ul>
+            <li><strong style="color: #38bdf8;">der</strong> = mužský rod (der Hund - pes)</li>
+            <li><strong style="color: #f472b6;">die</strong> = ženský rod (die Katze - kočka)</li>
+            <li><strong style="color: #fbbf24;">das</strong> = střední rod (das Obst - ovoce)</li>
+          </ul>
+        </div>
+
+        <div class="grammar-card">
+          <h3>2. Sloveso SEIN (být) & HABEN (mít)</h3>
+          <div class="grammar-grid">
+            <div>
+              <h4>SEIN (být)</h4>
+              <p>ich bin | du bist | er/sie/es ist</p>
+              <p>wir sind | ihr seid | sie/Sie sind</p>
+            </div>
+            <div>
+              <h4>HABEN (mít)</h4>
+              <p>ich habe | du hast | er/sie/es hat</p>
+              <p>wir haben | ihr habt | sie/Sie haben</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grammar-card">
+          <h3>3. Pořádek slov ve větě</h3>
+          <p>Ve oznamovací větě stojí časované sloveso <strong>VŽDY na 2. místě</strong>:</p>
+          <p class="code-example">Ich <strong>hoffe</strong>, dass du Deutsch lernst.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: GITHUB SETTINGS -->
+  <div id="modal-settings" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ Nastavení GitHub REST API</h2>
+        <button class="modal-close" data-close="modal-settings">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-desc">
+          Zadejte přístupové údaje pro automatický zápis vašich výsledků a úprav slovíček přímo do GitHub repozitáře.
+        </p>
+
+        <form id="form-settings" onsubmit="return false;">
+          <div class="form-group">
+            <label for="cfg-owner">Vlastník GitHub účtu (Owner):</label>
+            <input type="text" id="cfg-owner" class="custom-input" placeholder="např. petrprusek">
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-repo">Název repozitáře (Repo):</label>
+            <input type="text" id="cfg-repo" class="custom-input" placeholder="např. Slovicka">
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-path">Cesta k JSON souboru (Path):</label>
+            <input type="text" id="cfg-path" class="custom-input" value="slovicka_de_400.json">
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-pat">Personal Access Token (PAT z GitHubu):</label>
+            <input type="password" id="cfg-pat" class="custom-input" placeholder="github_pat_11A...">
+            <small class="form-help">Token vyžaduje oprávnění <strong>repo</strong> nebo <strong>contents:write</strong>.</small>
+          </div>
+
+          <div id="settings-status-msg" class="status-msg"></div>
+
+          <div class="modal-footer">
+            <button type="button" id="btn-test-connection" class="btn-secondary">🧪 Test připojení</button>
+            <button type="button" id="btn-save-settings" class="btn-primary">💾 Uložit nastavení</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD / EDIT WORD -->
+  <div id="modal-word" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-word-title">➕ Přidat slovíčko</h2>
+        <button class="modal-close" data-close="modal-word">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="form-word" onsubmit="return false;">
+          <input type="hidden" id="word-edit-index" value="-1">
+
+          <div class="form-group">
+            <label for="word-german">Německé slovo / výraz:</label>
+            <input type="text" id="word-german" class="custom-input" required placeholder="der Hund">
+          </div>
+
+          <div class="form-group">
+            <label for="word-pronunciation">Výslovnost:</label>
+            <input type="text" id="word-pronunciation" class="custom-input" placeholder="hunt">
+          </div>
+
+          <div class="form-group">
+            <label for="word-czech">Český překlad:</label>
+            <input type="text" id="word-czech" class="custom-input" required placeholder="pes">
+          </div>
+
+          <div class="form-group">
+            <label for="word-story">Mnemotechnická pomůcka / Příběh:</label>
+            <textarea id="word-story" class="custom-input custom-textarea" rows="3" placeholder="Příběh pro zapamatování..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="word-lesson">Lekce:</label>
+            <input type="text" id="word-lesson" class="custom-input" placeholder="Základy - Lekce 1">
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" data-close="modal-word">Zrušit</button>
+            <button type="button" id="btn-save-word" class="btn-primary">Uložit slovíčko</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JS -->
+  <script src="./app.js"></script>
+</body>
+</html>

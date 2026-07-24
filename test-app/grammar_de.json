@@ -1,0 +1,77 @@
+[
+  {
+    "id": "lesson_1",
+    "title": "Slovosled: Jednoduchá věta",
+    "description": "Němčina má pevný slovosled. Vyzkoušejte si ho!",
+    "theory": [
+      "V němčině je v oznamovací větě časované sloveso VŽDY na 2. pozici.",
+      "Příklad: Ich [habe] einen Hund.",
+      "Pokud začneme větu něčím jiným, sloveso zůstává na 2. pozici:",
+      "Příklad: Heute [habe] ich einen Hund."
+    ],
+    "exercises": [
+      {
+        "type": "sentence_builder",
+        "czech": "Mám psa.",
+        "words": ["einen", "Ich", "Hund", "habe"],
+        "correct_order": ["Ich", "habe", "einen", "Hund"]
+      },
+      {
+        "type": "sentence_builder",
+        "czech": "Dnes se učím německy.",
+        "words": ["lerne", "Deutsch", "Heute", "ich"],
+        "correct_order": ["Heute", "lerne", "ich", "Deutsch"]
+      },
+      {
+        "type": "sentence_builder",
+        "czech": "Auto je červené.",
+        "words": ["ist", "rot", "Das", "Auto"],
+        "correct_order": ["Das", "Auto", "ist", "rot"]
+      }
+    ]
+  },
+  {
+    "id": "lesson_2",
+    "title": "Časování sloves: sein & haben",
+    "description": "Dvě nejdůležitější slovesa v němčině.",
+    "theory": [
+      "Sloveso SEIN (být):",
+      "ich bin, du bist, er/sie/es ist",
+      "wir sind, ihr seid, sie/Sie sind",
+      "",
+      "Sloveso HABEN (mít):",
+      "ich habe, du hast, er/sie/es hat",
+      "wir haben, ihr habt, sie/Sie haben"
+    ],
+    "exercises": [
+      {
+        "type": "conjugation",
+        "pronoun": "ich",
+        "verb": "sein",
+        "options": ["bin", "bist", "ist", "sind"],
+        "correct": "bin"
+      },
+      {
+        "type": "conjugation",
+        "pronoun": "du",
+        "verb": "haben",
+        "options": ["habe", "hat", "hast", "habt"],
+        "correct": "hast"
+      },
+      {
+        "type": "conjugation",
+        "pronoun": "wir",
+        "verb": "sein",
+        "options": ["seid", "sind", "ist", "bin"],
+        "correct": "sind"
+      },
+      {
+        "type": "conjugation",
+        "pronoun": "er",
+        "verb": "haben",
+        "options": ["haben", "hast", "hat", "habe"],
+        "correct": "hat"
+      }
+    ]
+  }
+]
