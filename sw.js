@@ -1,61 +1,57 @@
-const CACHE_NAME = 'captain-vocab-v1';
+const CACHE_NAME = 'captain-vocab-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
+  './style.css?v=2',
+  './app.js?v=2',
   './manifest.json',
   './icon.svg',
   './slovicka_de_400.json'
 ];
 
-// Install Event - Cache Static Assets
+// Install Event - Skip waiting immediately to activate new SW
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
-  );
+  console.log('[SW v2] Installing new Service Worker...');
+  self.skipWaiting();
 });
 
-// Activate Event - Clean old caches
+// Activate Event - Clear all old caches (including v1)
 self.addEventListener('activate', (event) => {
+  console.log('[SW v2] Activating and clearing old caches...');
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[SW] Removing old cache:', key);
-            return caches.delete(key);
-          }
+          console.log('[SW v2] Deleting cache:', key);
+          return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
   );
 });
 
-// Fetch Event - Serve from Cache, fallback to Network (bypass GitHub API)
+// Fetch Event - Network First, fallback to Cache (Always bypass GitHub API)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Always use network for GitHub REST API requests
+  // Bypass Service Worker for GitHub API requests
   if (url.hostname.includes('github.com') || url.hostname.includes('githubusercontent.com')) {
     return;
   }
 
+  // Network First Strategy for app assets to guarantee latest version
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch background update for cache
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {/* ignore offline fetch error */});
-        return cachedResponse;
-      }
-      return fetch(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && event.request.method === 'GET') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return response;
+      })
+      .catch(() => {
+        console.log('[SW v2] Network failed, serving from cache:', event.request.url);
+        return caches.match(event.request);
+      })
   );
 });
