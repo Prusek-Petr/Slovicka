@@ -15,6 +15,8 @@
     fileSha: null,
     isGitHubSynced: false,
     isSaving: false,
+    hasPendingChanges: false,
+    syncTimer: null,
     
     // Practice Tab State
     practiceQueue: [],
@@ -71,32 +73,43 @@
 
       if (!this.hasValidConfig()) {
         console.warn('[GitHubAPI] Config missing or incomplete. Fetching local fallback JSON.');
-        const response = await fetch('./slovicka_de_400.json');
-        if (!response.ok) throw new Error('Nepodařilo se načíst místní soubor slovicka_de_400.json');
-        const content = await response.json();
-        return { content, sha: null, isGitHub: false };
+        return await this.fetchLocalFallback();
       }
 
-      const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': this.getAuthHeader(cfg.pat),
-          'Accept': 'application/vnd.github.v3+json',
-          'Cache-Control': 'no-cache'
+      try {
+        const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': this.getAuthHeader(cfg.pat),
+            'Accept': 'application/vnd.github.v3+json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) throw new Error(`Soubor '${cfg.path}' nebyl v repozitáři nalezen.`);
+          if (response.status === 401) throw new Error('Neplatný Personal Access Token (PAT).');
+          throw new Error(`GitHub API chyba: ${response.status} ${response.statusText}`);
         }
-      });
 
-      if (!response.ok) {
-        if (response.status === 404) throw new Error(`Soubor '${cfg.path}' nebyl v repozitáři nalezen.`);
-        if (response.status === 401) throw new Error('Neplatný Personal Access Token (PAT). Zkontrolujte zadaný token.');
-        throw new Error(`GitHub API chyba: ${response.status} ${response.statusText}`);
+        const data = await response.json();
+        const jsonText = this.base64ToUtf8(data.content);
+        const content = JSON.parse(jsonText);
+
+        return { content, sha: data.sha, isGitHub: true };
+      } catch (err) {
+        console.warn('[GitHubAPI] Fetch error, falling back to local file:', err);
+        const fallback = await this.fetchLocalFallback();
+        fallback.warning = err.message;
+        return fallback;
       }
+    },
 
-      const data = await response.json();
-      const jsonText = this.base64ToUtf8(data.content);
-      const content = JSON.parse(jsonText);
-
-      return { content, sha: data.sha, isGitHub: true };
+    async fetchLocalFallback() {
+      const response = await fetch('./slovicka_de_400.json');
+      if (!response.ok) throw new Error('Nepodařilo se načíst místní soubor slovicka_de_400.json');
+      const content = await response.json();
+      return { content, sha: null, isGitHub: false };
     },
 
     async saveFile(vocabularyData, commitMessage = 'Update vocabulary progress [auto-save]') {
@@ -239,12 +252,12 @@
     updateSyncBadge('syncing', 'Načítám...');
 
     try {
-      const { content, sha, isGitHub } = await GitHubAPI.fetchFile();
-      state.vocabulary = content;
-      state.fileSha = sha;
-      state.isGitHubSynced = isGitHub;
+      const res = await GitHubAPI.fetchFile();
+      state.vocabulary = res.content || [];
+      state.fileSha = res.sha;
+      state.isGitHubSynced = res.isGitHub;
 
-      if (isGitHub) {
+      if (res.isGitHub) {
         updateSyncBadge('online', 'Uloženo (GitHub)');
       } else {
         updateSyncBadge('offline', 'Místní JSON (Read Only)');
@@ -252,9 +265,10 @@
 
       refreshAllViews();
     } catch (err) {
-      console.error('[Init] Error loading vocabulary:', err);
+      console.error('[Init] Fatal error loading vocabulary:', err);
       updateSyncBadge('error', 'Chyba načítání');
-      alert(`Nepodařilo se načíst slovíčka: ${err.message}`);
+      state.vocabulary = [];
+      refreshAllViews();
     }
   }
 
@@ -270,19 +284,65 @@
     renderStats();
   }
 
-  async function autoSaveToGitHub(message = 'Update vocabulary progress [auto-save]') {
+  function triggerAutoSave(message = 'Update vocabulary progress [auto-save]') {
+    // 1. Save locally immediately to prevent data loss
+    try {
+      localStorage.setItem('captain_vocab_backup', JSON.stringify(state.vocabulary));
+    } catch (e) {
+      console.warn('Nelze uložit lokální zálohu:', e);
+    }
+
     if (!GitHubAPI.hasValidConfig()) {
       updateSyncBadge('offline', 'Místní (Neukládá na GitHub)');
       return;
     }
 
+    if (!navigator.onLine) {
+      updateSyncBadge('offline', 'Offline (Uloženo lokálně)');
+      state.hasPendingChanges = true;
+      return;
+    }
+
+    // 2. Set pending state and debounce
+    state.hasPendingChanges = true;
+    updateSyncBadge('syncing', 'Změny čekají (8s)...');
+
+    if (state.syncTimer) {
+      clearTimeout(state.syncTimer);
+    }
+
+    state.syncTimer = setTimeout(() => {
+      forceSyncToGitHub(message);
+    }, 8000);
+  }
+
+  async function forceSyncToGitHub(message = 'Update vocabulary progress [auto-save]') {
+    if (!GitHubAPI.hasValidConfig()) {
+      updateSyncBadge('offline', 'Místní (Neukládá na GitHub)');
+      return;
+    }
+
+    if (!navigator.onLine) {
+      updateSyncBadge('error', 'Není připojení');
+      return;
+    }
+
     if (state.isSaving) return;
     state.isSaving = true;
-    updateSyncBadge('syncing', 'Ukládám...');
+    
+    // Clear the timer if it was triggered manually
+    if (state.syncTimer) {
+      clearTimeout(state.syncTimer);
+      state.syncTimer = null;
+    }
+
+    updateSyncBadge('syncing', 'Ukládám na GitHub...');
 
     try {
       await GitHubAPI.saveFile(state.vocabulary, message);
+      state.hasPendingChanges = false;
       updateSyncBadge('online', 'Uloženo (GitHub)');
+      localStorage.removeItem('captain_vocab_backup'); // Clear local backup on success
     } catch (err) {
       console.error('[Save] Auto-save error:', err);
       updateSyncBadge('error', 'Chyba uložení ⚠');
@@ -438,7 +498,7 @@
     }, 200);
 
     // Trigger auto-save
-    await autoSaveToGitHub(`Update '${targetWord.german}': ${targetWord.repetition}`);
+    triggerAutoSave(`Update '${targetWord.german}': ${targetWord.repetition}`);
   }
 
   function speakGermanWord() {
@@ -560,7 +620,7 @@
     refreshAllViews();
 
     const actionText = index >= 0 ? `Edit '${german}'` : `Add '${german}'`;
-    await autoSaveToGitHub(actionText);
+    triggerAutoSave(actionText);
   }
 
   async function deleteWord(index) {
@@ -570,7 +630,7 @@
     if (confirm(`Opravdu chcete smazat slovíčko '${item.german}'?`)) {
       state.vocabulary.splice(index, 1);
       refreshAllViews();
-      await autoSaveToGitHub(`Delete '${item.german}'`);
+      triggerAutoSave(`Delete '${item.german}'`);
     }
   }
 
@@ -754,6 +814,12 @@
     });
 
     // Settings Modal
+    DOM.syncStatus.addEventListener('click', () => {
+      if (state.hasPendingChanges && navigator.onLine) {
+        forceSyncToGitHub('Ruční synchronizace změn');
+      }
+    });
+
     DOM.btnOpenSettings.addEventListener('click', () => {
       populateSettingsForm();
       DOM.settingsStatusMsg.style.display = 'none';
