@@ -742,6 +742,7 @@
   function showSettingsStatus(msg, type) {
     DOM.settingsStatusMsg.textContent = msg;
     DOM.settingsStatusMsg.className = `status-msg ${type}`;
+    DOM.settingsStatusMsg.style.display = 'block';
   }
 
   function openModal(modalEl) {
