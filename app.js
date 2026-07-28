@@ -56,9 +56,13 @@
     },
 
     base64ToUtf8(str) {
-      // Remove any whitespace / newlines returned by GitHub API
       const cleanStr = str.replace(/\s/g, '');
-      return decodeURIComponent(escape(atob(cleanStr)));
+      const binary = atob(cleanStr);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
     },
 
     getAuthHeader(pat) {
@@ -267,6 +271,7 @@
     } catch (err) {
       console.error('[Init] Fatal error loading vocabulary:', err);
       updateSyncBadge('error', 'Chyba načítání');
+      alert('Chyba načítání: ' + (err.stack || err.message));
       state.vocabulary = [];
       refreshAllViews();
     }
