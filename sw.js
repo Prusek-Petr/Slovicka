@@ -1,9 +1,9 @@
-const CACHE_NAME = 'captain-vocab-v2';
+const CACHE_NAME = 'captain-vocab-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css?v=2',
-  './app.js?v=2',
+  './style.css?v=3',
+  './app.js?v=3',
   './manifest.json',
   './icon.svg',
   './slovicka_de_400.json'

@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="stylesheet" href="./style.css?v=2">
+  <link rel="stylesheet" href="./style.css?v=3">
 </head>
 <body>
 
@@ -63,16 +63,13 @@
 
     <!-- TAB 1: PRACTICE / FLASHCARDS -->
     <section id="tab-practice" class="tab-content active">
-      <!-- Filter & Progress Bar Header -->
-      <div class="practice-controls">
-        <div class="select-group">
-          <label for="practice-lesson-select">Lekce:</label>
-          <select id="practice-lesson-select" class="custom-select">
-            <option value="ALL">Všechny lekce</option>
-          </select>
+      <!-- Top Bar: Filter & Breadcrumbs -->
+      <div class="practice-top-bar">
+        <div id="practice-breadcrumbs" class="breadcrumbs">
+          <!-- Rendered dynamically -->
         </div>
 
-        <div class="select-group">
+        <div class="select-group filter-group">
           <label for="practice-filter-select">Filtr:</label>
           <select id="practice-filter-select" class="custom-select">
             <option value="ALL">Všechna slovíčka</option>
@@ -82,75 +79,105 @@
         </div>
       </div>
 
-      <div class="practice-progress-container">
-        <div class="progress-bar">
-          <div id="practice-progress-fill" class="progress-fill" style="width: 0%;"></div>
+      <!-- STEP 1: Main Categories Grid -->
+      <div id="practice-categories-view" class="tiles-view">
+        <div class="section-header">
+          <h3 class="section-title">📂 Vyberte hlavní kategorii</h3>
         </div>
-        <div class="progress-info">
-          <span id="practice-count">Karta 0 z 0</span>
-          <span id="practice-percent">0 %</span>
-        </div>
+        <div id="categories-grid" class="tiles-grid"></div>
       </div>
 
-      <!-- Flashcard Area -->
-      <div id="flashcard-wrapper" class="flashcard-wrapper">
-        <div id="flashcard" class="flashcard">
-          <!-- Card Front -->
-          <div class="card-face card-front">
-            <div class="card-header">
-              <span id="card-lesson-tag" class="lesson-tag">Lekce</span>
-              <button id="btn-speak" class="speak-btn" title="Přečíst německy">🔊</button>
-            </div>
-            
-            <div class="card-body">
-              <h2 id="card-german" class="german-word">Wort</h2>
-              <p id="card-pronunciation" class="pronunciation">[výslovnost]</p>
-            </div>
+      <!-- STEP 2: Subcategories / Lessons Grid -->
+      <div id="practice-subcategories-view" class="tiles-view" style="display: none;">
+        <div class="section-header">
+          <button id="btn-back-to-categories" class="btn-back">⬅ Zpět na kategorie</button>
+          <h3 id="selected-category-title" class="section-title">Podkategorie</h3>
+        </div>
+        <div id="subcategories-grid" class="tiles-grid"></div>
+      </div>
 
-            <div id="card-story-box" class="story-box">
-              <span class="story-title">💡 Mnemotechnická pomůcka:</span>
-              <p id="card-story" class="story-text">-</p>
-            </div>
+      <!-- STEP 3: Active Flashcard Area -->
+      <div id="practice-flashcard-view" style="display: none;">
+        <div class="section-header">
+          <button id="btn-back-to-subcategories" class="btn-back">⬅ Zpět na výběr lekcí</button>
+          <span id="active-lesson-title" class="active-lesson-badge">Lekce</span>
+        </div>
 
-            <div class="card-footer">
-              <span class="flip-hint">👆 Klikni pro otočení překladu</span>
-            </div>
+        <div class="practice-progress-container">
+          <div class="progress-bar">
+            <div id="practice-progress-fill" class="progress-fill" style="width: 0%;"></div>
           </div>
-
-          <!-- Card Back -->
-          <div class="card-face card-back">
-            <div class="card-header">
-              <span class="translation-title">Český překlad</span>
-              <span id="card-rep-badge" class="rep-badge">0x</span>
-            </div>
-
-            <div class="card-body">
-              <h2 id="card-czech" class="czech-word">Slovo</h2>
-              <p id="card-last-reviewed" class="last-reviewed">Poslední revize: -</p>
-            </div>
-
-            <div class="card-footer">
-              <span class="flip-hint">👆 Klikni pro zpětné otočení</span>
-            </div>
+          <div class="progress-info">
+            <span id="practice-count">Karta 0 z 0</span>
+            <span id="practice-percent">0 %</span>
           </div>
         </div>
+
+        <!-- Flashcard Area -->
+        <div id="flashcard-wrapper" class="flashcard-wrapper">
+          <div id="flashcard" class="flashcard">
+            <!-- Card Front -->
+            <div class="card-face card-front">
+              <div class="card-header">
+                <span id="card-lesson-tag" class="lesson-tag">Lekce</span>
+                <button id="btn-speak" class="speak-btn" title="Přečíst německy">🔊</button>
+              </div>
+              
+              <div class="card-body">
+                <h2 id="card-german" class="german-word">Wort</h2>
+                <p id="card-pronunciation" class="pronunciation">[výslovnost]</p>
+              </div>
+
+              <div id="card-story-box" class="story-box">
+                <span class="story-title">💡 Mnemotechnická pomůcka:</span>
+                <p id="card-story" class="story-text">-</p>
+              </div>
+
+              <div class="card-footer">
+                <span class="flip-hint">👆 Klikni pro otočení překladu</span>
+              </div>
+            </div>
+
+            <!-- Card Back -->
+            <div class="card-face card-back">
+              <div class="card-header">
+                <span class="translation-title">Český překlad</span>
+                <span id="card-rep-badge" class="rep-badge">0x</span>
+              </div>
+
+              <div class="card-body">
+                <h2 id="card-czech" class="czech-word">Slovo</h2>
+                <p id="card-last-reviewed" class="last-reviewed">Poslední revize: -</p>
+              </div>
+
+              <div class="card-footer">
+                <span class="flip-hint">👆 Klikni pro zpětné otočení</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="practice-actions">
+          <button id="btn-dont-know" class="action-btn btn-wrong">
+            <span class="btn-icon">❌</span>
+            <span class="btn-label">Nevím</span>
+          </button>
+          <button id="btn-flip" class="action-btn btn-flip-action">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-label">Otočit</span>
+          </button>
+          <button id="btn-know" class="action-btn btn-correct">
+            <span class="btn-icon">✅</span>
+            <span class="btn-label">Vím</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="practice-actions">
-        <button id="btn-dont-know" class="action-btn btn-wrong">
-          <span class="btn-icon">❌</span>
-          <span class="btn-label">Nevím</span>
-        </button>
-        <button id="btn-flip" class="action-btn btn-flip-action">
-          <span class="btn-icon">🔄</span>
-          <span class="btn-label">Otočit</span>
-        </button>
-        <button id="btn-know" class="action-btn btn-correct">
-          <span class="btn-icon">✅</span>
-          <span class="btn-label">Vím</span>
-        </button>
-      </div>
+      <!-- Hidden legacy select kept for compatibility if needed -->
+      <select id="practice-lesson-select" style="display: none;">
+        <option value="ALL">Všechny lekce</option>
+      </select>
     </section>
 
 
@@ -367,6 +394,6 @@
   </div>
 
   <!-- Main JS -->
-  <script src="./app.js?v=2"></script>
+  <script src="./app.js?v=3"></script>
 </body>
 </html>

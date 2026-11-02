@@ -19,6 +19,9 @@
     syncTimer: null,
     
     // Practice Tab State
+    practiceStep: 'categories', // 'categories' | 'subcategories' | 'flashcards'
+    selectedCategory: null,     // e.g. 'Duolingo', 'Základy', 'Úvodní lekce 1', 'ALL'
+    selectedLesson: null,       // full lesson string or 'ALL_IN_CATEGORY' or 'ALL'
     practiceQueue: [],
     currentPracticeIndex: 0,
     isFlipped: false,
@@ -182,6 +185,17 @@
     tabContents: document.querySelectorAll('.tab-content'),
     
     // Practice Tab
+    practiceBreadcrumbs: document.getElementById('practice-breadcrumbs'),
+    practiceCategoriesView: document.getElementById('practice-categories-view'),
+    categoriesGrid: document.getElementById('categories-grid'),
+    practiceSubcategoriesView: document.getElementById('practice-subcategories-view'),
+    subcategoriesGrid: document.getElementById('subcategories-grid'),
+    selectedCategoryTitle: document.getElementById('selected-category-title'),
+    btnBackToCategories: document.getElementById('btn-back-to-categories'),
+    practiceFlashcardView: document.getElementById('practice-flashcard-view'),
+    btnBackToSubcategories: document.getElementById('btn-back-to-subcategories'),
+    activeLessonTitle: document.getElementById('active-lesson-title'),
+
     practiceLessonSelect: document.getElementById('practice-lesson-select'),
     practiceFilterSelect: document.getElementById('practice-filter-select'),
     practiceProgressFill: document.getElementById('practice-progress-fill'),
@@ -283,6 +297,7 @@
 
   function refreshAllViews() {
     populateLessonDropdowns();
+    renderPracticeHierarchy();
     updatePracticeQueue();
     renderTable();
     renderStats();
@@ -358,21 +373,307 @@
 
 
   // ==========================================================================
-  // 4. PRACTICE / FLASHCARDS MODULE
+  // 4. PRACTICE / FLASHCARDS MODULE (HIERARCHICAL TILES)
   // ==========================================================================
-  function populateLessonDropdowns() {
-    const lessons = Array.from(new Set(state.vocabulary.map(w => w.lesson || 'Ostatní'))).sort();
-    
-    // Practice dropdown
-    const currentPracticeVal = DOM.practiceLessonSelect.value;
-    DOM.practiceLessonSelect.innerHTML = '<option value="ALL">Všechny lekce</option>';
-    lessons.forEach(l => {
-      const opt = document.createElement('option');
-      opt.value = l;
-      opt.textContent = l;
-      DOM.practiceLessonSelect.appendChild(opt);
+  function parseLessonHierarchy(lessonStr) {
+    const raw = (lessonStr || 'Ostatní').trim();
+    if (raw.includes(' - ')) {
+      const parts = raw.split(' - ');
+      const category = parts[0].trim();
+      const subcategory = parts.slice(1).join(' - ').trim();
+      return { category, subcategory, fullLesson: raw };
+    }
+    const duoMatch = raw.match(/^(Duolingo)\s+(\d+.*)$/i);
+    if (duoMatch) {
+      return {
+        category: 'Duolingo',
+        subcategory: `Lekce ${duoMatch[2]}`,
+        fullLesson: raw
+      };
+    }
+    return {
+      category: raw,
+      subcategory: raw,
+      fullLesson: raw
+    };
+  }
+
+  function getCategoryIcon(catName) {
+    const lower = catName.toLowerCase();
+    if (lower.includes('duolingo')) return '🦉';
+    if (lower.includes('základy') || lower.includes('zaklady')) return '🧱';
+    if (lower.includes('úvodní') || lower.includes('uvodni')) return '🚀';
+    if (lower === 'all') return '🌟';
+    return '📁';
+  }
+
+  function buildHierarchyStats() {
+    const categoriesMap = {};
+
+    state.vocabulary.forEach((word) => {
+      const { category, subcategory, fullLesson } = parseLessonHierarchy(word.lesson);
+      const isLearned = Boolean(word.repetition && word.repetition !== '0x');
+
+      if (!categoriesMap[category]) {
+        categoriesMap[category] = {
+          name: category,
+          total: 0,
+          learned: 0,
+          subcategories: {}
+        };
+      }
+
+      categoriesMap[category].total++;
+      if (isLearned) categoriesMap[category].learned++;
+
+      if (!categoriesMap[category].subcategories[fullLesson]) {
+        categoriesMap[category].subcategories[fullLesson] = {
+          fullLesson,
+          subName: subcategory,
+          total: 0,
+          learned: 0
+        };
+      }
+
+      categoriesMap[category].subcategories[fullLesson].total++;
+      if (isLearned) categoriesMap[category].subcategories[fullLesson].learned++;
     });
-    DOM.practiceLessonSelect.value = currentPracticeVal || 'ALL';
+
+    return categoriesMap;
+  }
+
+  function naturalSort(a, b) {
+    return a.localeCompare(b, 'cs', { numeric: true, sensitivity: 'base' });
+  }
+
+  function createTileElement({ icon, title, subtitle, total, learned, badgeText, extraClass = '', onClick }) {
+    const pct = total > 0 ? Math.round((learned / total) * 100) : 0;
+    const isCompleted = total > 0 && learned === total;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `tile-card ${extraClass} ${isCompleted ? 'tile-completed' : ''}`.trim();
+
+    btn.innerHTML = `
+      <div>
+        <div class="tile-header">
+          <span class="tile-icon">${icon}</span>
+          <span class="tile-badge">${escapeHtml(badgeText || `${total} slov`)}</span>
+        </div>
+        <div class="tile-title" style="margin-top: 10px;">${escapeHtml(title)}</div>
+        ${subtitle ? `<div class="tile-sub">${escapeHtml(subtitle)}</div>` : ''}
+      </div>
+      <div class="tile-progress">
+        <div class="tile-progress-bar">
+          <div class="tile-progress-fill" style="width: ${pct}%;"></div>
+        </div>
+        <div class="tile-progress-text">
+          <span>Naučeno: ${learned}/${total}</span>
+          <span>${pct} %</span>
+        </div>
+      </div>
+    `;
+
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function renderPracticeBreadcrumbs() {
+    DOM.practiceBreadcrumbs.innerHTML = '';
+
+    const homeBtn = document.createElement('button');
+    homeBtn.type = 'button';
+    homeBtn.className = state.practiceStep === 'categories' ? 'crumb-current' : 'crumb-btn';
+    homeBtn.textContent = '🏠 Kategorie';
+    if (state.practiceStep !== 'categories') {
+      homeBtn.addEventListener('click', () => navigatePracticeStep('categories'));
+    }
+    DOM.practiceBreadcrumbs.appendChild(homeBtn);
+
+    if (state.practiceStep === 'subcategories' && state.selectedCategory) {
+      const sep = document.createElement('span');
+      sep.className = 'crumb-sep';
+      sep.textContent = '›';
+      DOM.practiceBreadcrumbs.appendChild(sep);
+
+      const catSpan = document.createElement('span');
+      catSpan.className = 'crumb-current';
+      catSpan.textContent = state.selectedCategory;
+      DOM.practiceBreadcrumbs.appendChild(catSpan);
+    } else if (state.practiceStep === 'flashcards') {
+      if (state.selectedCategory && state.selectedCategory !== 'ALL') {
+        const sep1 = document.createElement('span');
+        sep1.className = 'crumb-sep';
+        sep1.textContent = '›';
+        DOM.practiceBreadcrumbs.appendChild(sep1);
+
+        const catBtn = document.createElement('button');
+        catBtn.type = 'button';
+        catBtn.className = 'crumb-btn';
+        catBtn.textContent = state.selectedCategory;
+        catBtn.addEventListener('click', () => navigatePracticeStep('subcategories', state.selectedCategory));
+        DOM.practiceBreadcrumbs.appendChild(catBtn);
+      }
+
+      const sep2 = document.createElement('span');
+      sep2.className = 'crumb-sep';
+      sep2.textContent = '›';
+      DOM.practiceBreadcrumbs.appendChild(sep2);
+
+      const lessonSpan = document.createElement('span');
+      lessonSpan.className = 'crumb-current';
+      if (state.selectedLesson === 'ALL') {
+        lessonSpan.textContent = 'Všechna slovíčka';
+      } else if (state.selectedLesson === 'ALL_IN_CATEGORY') {
+        lessonSpan.textContent = `Vše v ${state.selectedCategory}`;
+      } else {
+        const parsed = parseLessonHierarchy(state.selectedLesson);
+        lessonSpan.textContent = parsed.subcategory;
+      }
+      DOM.practiceBreadcrumbs.appendChild(lessonSpan);
+    }
+  }
+
+  function navigatePracticeStep(step, category = state.selectedCategory, lesson = state.selectedLesson) {
+    state.practiceStep = step;
+    state.selectedCategory = category;
+    state.selectedLesson = lesson;
+    renderPracticeHierarchy();
+    if (step === 'flashcards') {
+      updatePracticeQueue();
+    }
+  }
+
+  function renderPracticeHierarchy() {
+    renderPracticeBreadcrumbs();
+
+    DOM.practiceCategoriesView.style.display = state.practiceStep === 'categories' ? 'block' : 'none';
+    DOM.practiceSubcategoriesView.style.display = state.practiceStep === 'subcategories' ? 'block' : 'none';
+    DOM.practiceFlashcardView.style.display = state.practiceStep === 'flashcards' ? 'block' : 'none';
+
+    const hierarchy = buildHierarchyStats();
+
+    // 1. Render Categories Grid
+    if (state.practiceStep === 'categories') {
+      DOM.categoriesGrid.innerHTML = '';
+
+      // Priority order: Duolingo, Základy, Úvodní lekce 1, then alphabetical
+      const priorityOrder = ['Duolingo', 'Základy', 'Úvodní lekce 1'];
+      const catKeys = Object.keys(hierarchy).sort((a, b) => {
+        const idxA = priorityOrder.indexOf(a);
+        const idxB = priorityOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return naturalSort(a, b);
+      });
+
+      catKeys.forEach(catKey => {
+        const catData = hierarchy[catKey];
+        const subCount = Object.keys(catData.subcategories).length;
+        const tile = createTileElement({
+          icon: getCategoryIcon(catKey),
+          title: catKey,
+          subtitle: `${subCount} ${subCount === 1 ? 'lekce' : (subCount >= 2 && subCount <= 4 ? 'lekce' : 'lekcí')}`,
+          total: catData.total,
+          learned: catData.learned,
+          badgeText: `${catData.total} slov`,
+          onClick: () => navigatePracticeStep('subcategories', catKey, null)
+        });
+        DOM.categoriesGrid.appendChild(tile);
+      });
+
+      // Add "Všechny kategorie" tile at the end
+      const totalWords = state.vocabulary.length;
+      const totalLearned = state.vocabulary.filter(w => w.repetition && w.repetition !== '0x').length;
+      if (totalWords > 0) {
+        const allTile = createTileElement({
+          icon: '🌟',
+          title: 'Všechna slovíčka',
+          subtitle: 'Procvičovat napříč všemi kategoriemi',
+          total: totalWords,
+          learned: totalLearned,
+          badgeText: `Vše (${totalWords})`,
+          extraClass: 'tile-all',
+          onClick: () => navigatePracticeStep('flashcards', 'ALL', 'ALL')
+        });
+        DOM.categoriesGrid.appendChild(allTile);
+      }
+    }
+
+    // 2. Render Subcategories Grid
+    if (state.practiceStep === 'subcategories' && state.selectedCategory) {
+      DOM.subcategoriesGrid.innerHTML = '';
+      const catData = hierarchy[state.selectedCategory];
+
+      if (!catData) {
+        navigatePracticeStep('categories', null, null);
+        return;
+      }
+
+      DOM.selectedCategoryTitle.textContent = `${getCategoryIcon(state.selectedCategory)} ${state.selectedCategory}`;
+
+      const subKeys = Object.keys(catData.subcategories).sort((a, b) => {
+        return naturalSort(catData.subcategories[a].subName, catData.subcategories[b].subName);
+      });
+
+      // If more than 1 subcategory, offer "Vše v kategorii" tile first
+      if (subKeys.length > 1) {
+        const allCatTile = createTileElement({
+          icon: '⚡',
+          title: `Vše z kategorie ${state.selectedCategory}`,
+          subtitle: `Všech ${subKeys.length} lekcí dohromady`,
+          total: catData.total,
+          learned: catData.learned,
+          badgeText: `${catData.total} slov`,
+          extraClass: 'tile-all',
+          onClick: () => navigatePracticeStep('flashcards', state.selectedCategory, 'ALL_IN_CATEGORY')
+        });
+        DOM.subcategoriesGrid.appendChild(allCatTile);
+      }
+
+      subKeys.forEach(fullLessonKey => {
+        const subData = catData.subcategories[fullLessonKey];
+        const tile = createTileElement({
+          icon: '📘',
+          title: subData.subName,
+          subtitle: fullLessonKey !== subData.subName ? fullLessonKey : '',
+          total: subData.total,
+          learned: subData.learned,
+          badgeText: `${subData.total} slov`,
+          onClick: () => navigatePracticeStep('flashcards', state.selectedCategory, fullLessonKey)
+        });
+        DOM.subcategoriesGrid.appendChild(tile);
+      });
+    }
+
+    // 3. Update active header badge in Flashcard step
+    if (state.practiceStep === 'flashcards') {
+      if (state.selectedLesson === 'ALL') {
+        DOM.activeLessonTitle.textContent = '🌟 Všechna slovíčka';
+      } else if (state.selectedLesson === 'ALL_IN_CATEGORY') {
+        DOM.activeLessonTitle.textContent = `⚡ ${state.selectedCategory} (Vše)`;
+      } else {
+        DOM.activeLessonTitle.textContent = `📘 ${state.selectedLesson}`;
+      }
+    }
+  }
+
+  function populateLessonDropdowns() {
+    const lessons = Array.from(new Set(state.vocabulary.map(w => w.lesson || 'Ostatní'))).sort(naturalSort);
+    
+    // Practice dropdown (legacy hidden)
+    if (DOM.practiceLessonSelect) {
+      const currentPracticeVal = DOM.practiceLessonSelect.value;
+      DOM.practiceLessonSelect.innerHTML = '<option value="ALL">Všechny lekce</option>';
+      lessons.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l;
+        opt.textContent = l;
+        DOM.practiceLessonSelect.appendChild(opt);
+      });
+      DOM.practiceLessonSelect.value = currentPracticeVal || 'ALL';
+    }
 
     // List dropdown
     const currentListVal = DOM.listLessonFilter.value;
@@ -387,14 +688,19 @@
   }
 
   function updatePracticeQueue() {
-    const selectedLesson = DOM.practiceLessonSelect.value;
     const selectedFilter = DOM.practiceFilterSelect.value;
 
     let items = state.vocabulary.map((item, index) => ({ item, index }));
 
-    // Filter by lesson
-    if (selectedLesson !== 'ALL') {
-      items = items.filter(x => (x.item.lesson || 'Ostatní') === selectedLesson);
+    // Filter by hierarchical selection
+    if (state.selectedLesson && state.selectedLesson !== 'ALL') {
+      if (state.selectedLesson === 'ALL_IN_CATEGORY' && state.selectedCategory) {
+        items = items.filter(x => parseLessonHierarchy(x.item.lesson).category === state.selectedCategory);
+      } else {
+        items = items.filter(x => (x.item.lesson || 'Ostatní') === state.selectedLesson);
+      }
+    } else if (state.selectedCategory && state.selectedCategory !== 'ALL') {
+      items = items.filter(x => parseLessonHierarchy(x.item.lesson).category === state.selectedCategory);
     }
 
     // Filter by learned status
@@ -498,6 +804,7 @@
         state.currentPracticeIndex = 0;
       }
       renderPracticeCard();
+      renderPracticeHierarchy();
       renderStats();
     }, 200);
 
@@ -775,8 +1082,22 @@
     });
 
     // Practice controls
-    DOM.practiceLessonSelect.addEventListener('change', updatePracticeQueue);
+    if (DOM.practiceLessonSelect) {
+      DOM.practiceLessonSelect.addEventListener('change', updatePracticeQueue);
+    }
     DOM.practiceFilterSelect.addEventListener('change', updatePracticeQueue);
+
+    DOM.btnBackToCategories.addEventListener('click', () => {
+      navigatePracticeStep('categories', null, null);
+    });
+
+    DOM.btnBackToSubcategories.addEventListener('click', () => {
+      if (state.selectedCategory && state.selectedCategory !== 'ALL') {
+        navigatePracticeStep('subcategories', state.selectedCategory, null);
+      } else {
+        navigatePracticeStep('categories', null, null);
+      }
+    });
 
     DOM.flashcard.addEventListener('click', (e) => {
       // Don't flip card if speak button was clicked
@@ -853,7 +1174,7 @@
     document.addEventListener('keydown', (e) => {
       const isPracticeActive = document.getElementById('tab-practice').classList.contains('active');
       const isModalActive = document.querySelector('.modal-overlay.active');
-      if (!isPracticeActive || isModalActive) return;
+      if (!isPracticeActive || isModalActive || state.practiceStep !== 'flashcards') return;
 
       if (e.code === 'Space') {
         e.preventDefault();
