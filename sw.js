@@ -1,12 +1,13 @@
-const CACHE_NAME = 'captain-vocab-v9';
+const CACHE_NAME = 'captain-vocab-v10';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css?v=9',
-  './app.js?v=9',
+  './style.css?v=10',
+  './app.js?v=10',
   './manifest.json',
   './icon.svg',
-  './slovicka_de_400.json'
+  './slovicka_de_400.json',
+  './slovicka_app.json'
 ];
 
 // Install Event - Skip waiting immediately to activate new SW

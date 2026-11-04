@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="stylesheet" href="./style.css?v=9">
+  <link rel="stylesheet" href="./style.css?v=10">
 </head>
 <body>
 
@@ -22,12 +22,16 @@
         <img src="./icon.svg" alt="Captain Vocab Shield" class="shield-icon">
         <div class="logo-text">
           <span class="brand-title">CAPTAIN VOCAB</span>
-          <span class="brand-sub">Němčina 400</span>
+          <span id="brand-sub" class="brand-sub">Němčina 400</span>
         </div>
       </div>
     </div>
 
     <div class="header-right">
+      <div class="lang-switcher" title="Přepnout jazyk slovíček">
+        <button type="button" id="btn-lang-de" class="lang-btn active" data-lang="de">🇩🇪 DE</button>
+        <button type="button" id="btn-lang-en" class="lang-btn" data-lang="en">🇬🇧 EN</button>
+      </div>
       <div id="sync-status" class="sync-badge sync-offline" title="Kliknutím vynutíš synchronizaci" style="cursor: pointer;">
         <span class="sync-dot"></span>
         <span id="sync-text" class="sync-label">Nepřipojeno</span>
@@ -313,8 +317,8 @@
 
           <select id="list-sort-select" class="custom-select" title="Třídit slovíčka">
             <option value="DEFAULT">↕️ Výchozí pořadí</option>
-            <option value="DE_ASC">🔤 Německy (A → Z)</option>
-            <option value="DE_DESC">🔤 Německy (Z → A)</option>
+            <option value="DE_ASC" id="opt-sort-foreign-asc">🔤 Německy (A → Z)</option>
+            <option value="DE_DESC" id="opt-sort-foreign-desc">🔤 Německy (Z → A)</option>
             <option value="CZ_ASC">🔤 Česky (A → Z)</option>
             <option value="CZ_DESC">🔤 Česky (Z → A)</option>
             <option value="REP_ASC">🔄 Opakování (nejméně → nejvíce)</option>
@@ -338,7 +342,7 @@
         <table class="vocab-table">
           <thead>
             <tr>
-              <th class="sortable-th" data-sort="DE" title="Kliknutím seřadíte podle němčiny">Německy <span class="sort-indicator" id="sort-ind-DE"></span></th>
+              <th class="sortable-th" data-sort="DE" title="Kliknutím seřadíte podle cizího slova"><span id="th-foreign-label">Německy</span> <span class="sort-indicator" id="sort-ind-DE"></span></th>
               <th>Výsl.</th>
               <th class="sortable-th" data-sort="CZ" title="Kliknutím seřadíte podle češtiny">Česky <span class="sort-indicator" id="sort-ind-CZ"></span></th>
               <th class="sortable-th" data-sort="STATUS" title="Kliknutím seřadíte podle statusů">Status <span class="sort-indicator" id="sort-ind-STATUS"></span></th>
@@ -492,7 +496,7 @@
           <input type="hidden" id="word-edit-index" value="-1">
 
           <div class="form-group">
-            <label for="word-german">Německé slovo / výraz:</label>
+            <label id="label-word-foreign" for="word-german">Německé slovo / výraz:</label>
             <input type="text" id="word-german" class="custom-input" required placeholder="der Hund">
           </div>
 
@@ -541,6 +545,6 @@
   </div>
 
   <!-- Main JS -->
-  <script src="./app.js?v=9"></script>
+  <script src="./app.js?v=10"></script>
 </body>
 </html>

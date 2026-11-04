@@ -6,11 +6,44 @@
 (function () {
   'use strict';
 
-  // LocalStorage Key for Credentials
+  // LocalStorage Key for Credentials & Language
   const STORAGE_CONFIG_KEY = 'captain_vocab_github_config';
+  const STORAGE_LANG_KEY = 'captain_vocab_lang';
+
+  const LANG_META = {
+    de: {
+      code: 'de',
+      defaultPath: 'slovicka_de_400.json',
+      field: 'german',
+      speechLang: 'de-DE',
+      brandSub: '🇩🇪 Němčina',
+      thLabel: 'Německy',
+      sortAscLabel: '🔤 Německy (A → Z)',
+      sortDescLabel: '🔤 Německy (Z → A)',
+      searchPlaceholder: 'Hledat v němčině i češtině...',
+      modalWordLabel: 'Německé slovo / výraz:',
+      modalWordPlaceholder: 'der Hund',
+      speakTitle: 'Přečíst německy'
+    },
+    en: {
+      code: 'en',
+      defaultPath: 'slovicka_app.json',
+      field: 'english',
+      speechLang: 'en-US',
+      brandSub: '🇬🇧 Angličtina',
+      thLabel: 'Anglicky',
+      sortAscLabel: '🔤 Anglicky (A → Z)',
+      sortDescLabel: '🔤 Anglicky (Z → A)',
+      searchPlaceholder: 'Hledat v angličtině i češtině...',
+      modalWordLabel: 'Anglické slovo / výraz:',
+      modalWordPlaceholder: 'accident',
+      speakTitle: 'Přečíst anglicky'
+    }
+  };
 
   // Application State
   const state = {
+    currentLang: localStorage.getItem(STORAGE_LANG_KEY) === 'en' ? 'en' : 'de',
     vocabulary: [],
     fileSha: null,
     isGitHubSynced: false,
@@ -41,21 +74,66 @@
     expandedStatsCategories: {},
   };
 
+  function getLangMeta() {
+    return LANG_META[state.currentLang] || LANG_META.de;
+  }
+
+  function getForeignWord(item) {
+    if (!item) return '';
+    if (state.currentLang === 'en') {
+      return item.english || item.german || '';
+    }
+    return item.german || item.english || '';
+  }
+
   // ==========================================================================
   // 1. GITHUB REST API HELPER MODULE
   // ==========================================================================
   const GitHubAPI = {
+    getDefaultPath() {
+      return getLangMeta().defaultPath;
+    },
+
+    getActivePath(cfg) {
+      if (state.currentLang === 'en') {
+        return cfg.pathEn || 'slovicka_app.json';
+      }
+      return cfg.pathDe || cfg.path || 'slovicka_de_400.json';
+    },
+
     getConfig() {
+      const defPath = this.getDefaultPath();
       try {
         const stored = localStorage.getItem(STORAGE_CONFIG_KEY);
-        return stored ? JSON.parse(stored) : { owner: '', repo: '', path: 'slovicka_de_400.json', pat: '' };
+        if (!stored) return { owner: '', repo: '', path: defPath, pat: '' };
+        const parsed = JSON.parse(stored);
+        parsed.path = this.getActivePath(parsed);
+        return parsed;
       } catch (e) {
-        return { owner: '', repo: '', path: 'slovicka_de_400.json', pat: '' };
+        return { owner: '', repo: '', path: defPath, pat: '' };
       }
     },
 
     saveConfig(cfg) {
-      localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(cfg));
+      let existing = {};
+      try {
+        existing = JSON.parse(localStorage.getItem(STORAGE_CONFIG_KEY) || '{}');
+      } catch (e) {
+        existing = {};
+      }
+      const merged = {
+        ...existing,
+        owner: cfg.owner,
+        repo: cfg.repo,
+        pat: cfg.pat,
+        path: cfg.path
+      };
+      if (state.currentLang === 'en') {
+        merged.pathEn = cfg.path || 'slovicka_app.json';
+      } else {
+        merged.pathDe = cfg.path || 'slovicka_de_400.json';
+      }
+      localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(merged));
     },
 
     hasValidConfig() {
@@ -122,8 +200,9 @@
     },
 
     async fetchLocalFallback() {
-      const response = await fetch('./slovicka_de_400.json');
-      if (!response.ok) throw new Error('Nepodařilo se načíst místní soubor slovicka_de_400.json');
+      const file = this.getDefaultPath();
+      const response = await fetch(`./${file}`);
+      if (!response.ok) throw new Error(`Nepodařilo se načíst místní soubor ${file}`);
       const content = await response.json();
       return { content, sha: null, isGitHub: false };
     },
@@ -186,6 +265,13 @@
   // 2. DOM ELEMENTS CACHE
   // ==========================================================================
   const DOM = {
+    brandSub: document.getElementById('brand-sub'),
+    btnLangDe: document.getElementById('btn-lang-de'),
+    btnLangEn: document.getElementById('btn-lang-en'),
+    thForeignLabel: document.getElementById('th-foreign-label'),
+    optSortForeignAsc: document.getElementById('opt-sort-foreign-asc'),
+    optSortForeignDesc: document.getElementById('opt-sort-foreign-desc'),
+    labelWordForeign: document.getElementById('label-word-foreign'),
     syncStatus: document.getElementById('sync-status'),
     syncText: document.getElementById('sync-text'),
     btnOpenSettings: document.getElementById('btn-open-settings'),
@@ -300,9 +386,57 @@
   // ==========================================================================
   async function initApp() {
     setupEventListeners();
+    applyLanguageUI();
     populateSettingsForm();
     registerServiceWorker();
 
+    await loadVocabulary();
+  }
+
+  function applyLanguageUI() {
+    const meta = getLangMeta();
+    if (DOM.btnLangDe) DOM.btnLangDe.classList.toggle('active', state.currentLang === 'de');
+    if (DOM.btnLangEn) DOM.btnLangEn.classList.toggle('active', state.currentLang === 'en');
+    if (DOM.thForeignLabel) DOM.thForeignLabel.textContent = meta.thLabel;
+    if (DOM.optSortForeignAsc) DOM.optSortForeignAsc.textContent = meta.sortAscLabel;
+    if (DOM.optSortForeignDesc) DOM.optSortForeignDesc.textContent = meta.sortDescLabel;
+    if (DOM.listSearchInput) DOM.listSearchInput.placeholder = meta.searchPlaceholder;
+    if (DOM.labelWordForeign) DOM.labelWordForeign.textContent = meta.modalWordLabel;
+    if (DOM.wordGerman) DOM.wordGerman.placeholder = meta.modalWordPlaceholder;
+    if (DOM.btnSpeak) DOM.btnSpeak.title = meta.speakTitle;
+    if (DOM.btnReviewSpeak) DOM.btnReviewSpeak.title = meta.speakTitle;
+    if (DOM.brandSub) {
+      const count = state.vocabulary.length;
+      DOM.brandSub.textContent = count > 0 ? `${meta.brandSub} (${count})` : meta.brandSub;
+    }
+  }
+
+  async function switchLanguage(newLang) {
+    if (newLang === state.currentLang) return;
+
+    // Flush any pending changes for the previous language before switching
+    if (state.hasPendingChanges && navigator.onLine && GitHubAPI.hasValidConfig()) {
+      await forceSyncToGitHub(`Auto-save before language switch (${state.currentLang.toUpperCase()})`);
+    }
+
+    state.currentLang = newLang;
+    localStorage.setItem(STORAGE_LANG_KEY, newLang);
+
+    // Reset navigation & filters
+    state.practiceStep = 'categories';
+    state.selectedCategory = null;
+    state.selectedLesson = null;
+    state.reviewStep = 'menu';
+    state.reviewMode = null;
+    state.searchQuery = '';
+    state.listLessonFilter = 'ALL';
+    state.listStatusFilter = 'ALL';
+    state.expandedStatsCategories = {};
+    if (DOM.listSearchInput) DOM.listSearchInput.value = '';
+    if (DOM.listStatusFilter) DOM.listStatusFilter.value = 'ALL';
+
+    applyLanguageUI();
+    populateSettingsForm();
     await loadVocabulary();
   }
 
@@ -337,6 +471,7 @@
   }
 
   function refreshAllViews() {
+    applyLanguageUI();
     populateLessonDropdowns();
     renderPracticeHierarchy();
     updatePracticeQueue();
@@ -347,8 +482,9 @@
 
   function triggerAutoSave(message = 'Update vocabulary progress [auto-save]') {
     // 1. Save locally immediately to prevent data loss
+    const backupKey = `captain_vocab_backup_${state.currentLang}`;
     try {
-      localStorage.setItem('captain_vocab_backup', JSON.stringify(state.vocabulary));
+      localStorage.setItem(backupKey, JSON.stringify(state.vocabulary));
     } catch (e) {
       console.warn('Nelze uložit lokální zálohu:', e);
     }
@@ -403,7 +539,7 @@
       await GitHubAPI.saveFile(state.vocabulary, message);
       state.hasPendingChanges = false;
       updateSyncBadge('online', 'Uloženo (GitHub)');
-      localStorage.removeItem('captain_vocab_backup'); // Clear local backup on success
+      localStorage.removeItem(`captain_vocab_backup_${state.currentLang}`); // Clear local backup on success
     } catch (err) {
       console.error('[Save] Auto-save error:', err);
       updateSyncBadge('error', 'Chyba uložení ⚠');
@@ -455,6 +591,21 @@
     if (lower.includes('duolingo')) return '🦉';
     if (lower.includes('základy') || lower.includes('zaklady')) return '🧱';
     if (lower.includes('úvodní') || lower.includes('uvodni')) return '🚀';
+    if (lower.includes('cestování') || lower.includes('cestovani')) return '✈️';
+    if (lower.includes('jídlo') || lower.includes('restaurace')) return '🍔';
+    if (lower.includes('práce') || lower.includes('prace')) return '💼';
+    if (lower.includes('zdraví') || lower.includes('tělo')) return '🩺';
+    if (lower.includes('harry potter')) return '⚡';
+    if (lower.includes('zvířata')) return '🐾';
+    if (lower.includes('bydlení')) return '🏠';
+    if (lower.includes('rodina') || lower.includes('přátelé') || lower.includes('charakter')) return '👨‍👩‍👧';
+    if (lower.includes('kultura') || lower.includes('volný čas')) return '🎭';
+    if (lower.includes('nakupování') || lower.includes('móda')) return '🛍️';
+    if (lower.includes('počasí') || lower.includes('prázdniny')) return '☀️';
+    if (lower.includes('zprávy')) return '📰';
+    if (lower.includes('frázová') || lower.includes('nepravidelná')) return '🔥';
+    if (lower.includes('vzdělávání')) return '🎓';
+    if (lower.includes('obecné')) return '📘';
     if (lower === 'all') return '🌟';
     return '📁';
   }
@@ -799,7 +950,7 @@
     const currentEntry = state.practiceQueue[state.currentPracticeIndex];
     const word = currentEntry.item;
 
-    DOM.cardGerman.textContent = word.german || '-';
+    DOM.cardGerman.textContent = getForeignWord(word) || '-';
     DOM.cardPronunciation.textContent = word.pronunciation ? `[${word.pronunciation}]` : '';
     DOM.cardCzech.textContent = word.czech || '-';
     DOM.cardLessonTag.textContent = word.lesson || 'Všeobecné';
@@ -875,13 +1026,13 @@
     }, 200);
 
     // Trigger auto-save
-    triggerAutoSave(`Update '${targetWord.german}': ${targetWord.repetition}`);
+    triggerAutoSave(`Update '${getForeignWord(targetWord)}': ${targetWord.repetition}`);
   }
 
   function speakTextGerman(text) {
     if (!text || !('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'de-DE';
+    utterance.lang = getLangMeta().speechLang;
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
   }
@@ -889,7 +1040,7 @@
   function speakGermanWord() {
     if (state.practiceQueue.length === 0) return;
     const currentEntry = state.practiceQueue[state.currentPracticeIndex];
-    speakTextGerman(currentEntry.item.german);
+    speakTextGerman(getForeignWord(currentEntry.item));
   }
 
   // ==========================================================================
@@ -1057,7 +1208,7 @@
     const currentEntry = state.reviewQueue[state.currentReviewIndex];
     const word = state.vocabulary[currentEntry.index] || currentEntry.item;
 
-    DOM.reviewCardGerman.textContent = word.german || '-';
+    DOM.reviewCardGerman.textContent = getForeignWord(word) || '-';
     DOM.reviewCardPronunciation.textContent = word.pronunciation ? `[${word.pronunciation}]` : '';
     DOM.reviewCardCzech.textContent = word.czech || '-';
     DOM.reviewCardLessonTag.textContent = word.lesson || 'Všeobecné';
@@ -1119,7 +1270,7 @@
       renderStats();
     }, 200);
 
-    triggerAutoSave(`Review '${targetWord.german}': ${targetWord.repetition}`);
+    triggerAutoSave(`Review '${getForeignWord(targetWord)}': ${targetWord.repetition}`);
   }
 
 
@@ -1128,7 +1279,7 @@
   // ==========================================================================
   function cleanGermanForSort(str) {
     if (!str) return '';
-    return str.trim().replace(/^(der|die|das)\s+/i, '').trim();
+    return str.trim().replace(/^(der|die|das|the|a|an|to)\s+/i, '').trim();
   }
 
   function updateSortHeaderIndicators() {
@@ -1167,8 +1318,9 @@
 
     // 1. Filter by search, lesson, and learned / problematic status
     entries = entries.filter(({ item }) => {
+      const foreignWord = getForeignWord(item);
       const matchSearch = !search ||
-        (item.german && item.german.toLowerCase().includes(search)) ||
+        (foreignWord && foreignWord.toLowerCase().includes(search)) ||
         (item.czech && item.czech.toLowerCase().includes(search));
 
       const matchLesson = lessonFilter === 'ALL' || (item.lesson || 'Ostatní') === lessonFilter;
@@ -1187,12 +1339,15 @@
 
     // 2. Sort entries
     if (sortBy !== 'DEFAULT') {
+      const sortLocale = state.currentLang === 'en' ? 'en' : 'de';
       entries.sort((a, b) => {
         const wA = a.item;
         const wB = b.item;
+        const fA = cleanGermanForSort(getForeignWord(wA));
+        const fB = cleanGermanForSort(getForeignWord(wB));
 
         if (sortBy === 'DE_ASC' || sortBy === 'DE_DESC') {
-          const cmp = cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de', { sensitivity: 'base' });
+          const cmp = fA.localeCompare(fB, sortLocale, { sensitivity: 'base' });
           return sortBy === 'DE_ASC' ? cmp : -cmp;
         }
 
@@ -1205,11 +1360,11 @@
         const repB = parseRepetitionCount(wB.repetition);
 
         if (sortBy === 'REP_ASC') {
-          return repA !== repB ? repA - repB : cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+          return repA !== repB ? repA - repB : fA.localeCompare(fB, sortLocale);
         }
 
         if (sortBy === 'REP_DESC') {
-          return repA !== repB ? repB - repA : cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+          return repA !== repB ? repB - repA : fA.localeCompare(fB, sortLocale);
         }
 
         const learnedA = isWordLearned(wA) ? 1 : 0;
@@ -1218,13 +1373,13 @@
         if (sortBy === 'STATUS_UNLEARNED') {
           if (learnedA !== learnedB) return learnedA - learnedB;
           if (repA !== repB) return repA - repB;
-          return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+          return fA.localeCompare(fB, sortLocale);
         }
 
         if (sortBy === 'STATUS_LEARNED') {
           if (learnedA !== learnedB) return learnedB - learnedA;
           if (repA !== repB) return repB - repA;
-          return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+          return fA.localeCompare(fB, sortLocale);
         }
 
         if (sortBy === 'STATUS_PROBLEMATIC') {
@@ -1232,7 +1387,7 @@
           const probB = isWordProblematic(wB) ? 1 : 0;
           if (probA !== probB) return probB - probA;
           if (learnedA !== learnedB) return learnedA - learnedB;
-          return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+          return fA.localeCompare(fB, sortLocale);
         }
 
         return 0;
@@ -1256,7 +1411,7 @@
       const probPillTitle = isProb ? 'Problémové slovíčko (kliknutím zrušíte)' : 'Kliknutím označíte jako problémové';
 
       tr.innerHTML = `
-        <td class="cell-de">${escapeHtml(item.german || '')}</td>
+        <td class="cell-de">${escapeHtml(getForeignWord(item))}</td>
         <td class="cell-pron">${escapeHtml(item.pronunciation || '')}</td>
         <td class="cell-cz">${escapeHtml(item.czech || '')}</td>
         <td class="cell-nowrap">
@@ -1294,7 +1449,7 @@
     }
 
     refreshAllViews();
-    triggerAutoSave(`Toggle learned '${item.german}': ${nextLearned}`);
+    triggerAutoSave(`Toggle learned '${getForeignWord(item)}': ${nextLearned}`);
   }
 
   function toggleWordProblematic(index) {
@@ -1303,7 +1458,7 @@
 
     item.problematic = !isWordProblematic(item);
     refreshAllViews();
-    triggerAutoSave(`Toggle problematic '${item.german}': ${item.problematic}`);
+    triggerAutoSave(`Toggle problematic '${getForeignWord(item)}': ${item.problematic}`);
   }
 
   function escapeHtml(str) {
@@ -1319,7 +1474,7 @@
     DOM.wordPronunciation.value = '';
     DOM.wordCzech.value = '';
     DOM.wordStory.value = '';
-    DOM.wordLesson.value = 'Základy - Lekce 1';
+    DOM.wordLesson.value = state.currentLang === 'en' ? 'Obecné 1 - Lekce 1' : 'Základy - Lekce 1';
     if (DOM.wordLearned) DOM.wordLearned.checked = false;
     if (DOM.wordProblematic) DOM.wordProblematic.checked = false;
     
@@ -1332,7 +1487,7 @@
 
     DOM.modalWordTitle.textContent = '✏️ Upravit slovíčko';
     DOM.wordEditIndex.value = index;
-    DOM.wordGerman.value = item.german || '';
+    DOM.wordGerman.value = getForeignWord(item);
     DOM.wordPronunciation.value = item.pronunciation || '';
     DOM.wordCzech.value = item.czech || '';
     DOM.wordStory.value = item.story || '';
@@ -1345,11 +1500,11 @@
 
   async function saveWordModal() {
     const index = parseInt(DOM.wordEditIndex.value, 10);
-    const german = DOM.wordGerman.value.trim();
+    const foreignVal = DOM.wordGerman.value.trim();
     const czech = DOM.wordCzech.value.trim();
 
-    if (!german || !czech) {
-      alert('Vyplňte prosím německé i české slovo.');
+    if (!foreignVal || !czech) {
+      alert('Vyplňte prosím cizí i české slovo.');
       return;
     }
 
@@ -1365,8 +1520,9 @@
       currentRepetition = '0x';
     }
 
+    const existingItem = index >= 0 ? state.vocabulary[index] : {};
     const wordData = {
-      german,
+      ...existingItem,
       pronunciation: DOM.wordPronunciation.value.trim(),
       czech,
       story: DOM.wordStory.value.trim() || '-',
@@ -1378,6 +1534,12 @@
       lesson: DOM.wordLesson.value.trim() || 'Všeobecné'
     };
 
+    if (state.currentLang === 'en' || ('english' in existingItem && !('german' in existingItem))) {
+      wordData.english = foreignVal;
+    } else {
+      wordData.german = foreignVal;
+    }
+
     if (index >= 0) {
       state.vocabulary[index] = wordData;
     } else {
@@ -1387,18 +1549,19 @@
     closeModal(DOM.modalWord);
     refreshAllViews();
 
-    const actionText = index >= 0 ? `Edit '${german}'` : `Add '${german}'`;
+    const actionText = index >= 0 ? `Edit '${foreignVal}'` : `Add '${foreignVal}'`;
     triggerAutoSave(actionText);
   }
 
   async function deleteWord(index) {
     const item = state.vocabulary[index];
     if (!item) return;
+    const wordTitle = getForeignWord(item);
 
-    if (confirm(`Opravdu chcete smazat slovíčko '${item.german}'?`)) {
+    if (confirm(`Opravdu chcete smazat slovíčko '${wordTitle}'?`)) {
       state.vocabulary.splice(index, 1);
       refreshAllViews();
-      triggerAutoSave(`Delete '${item.german}'`);
+      triggerAutoSave(`Delete '${wordTitle}'`);
     }
   }
 
@@ -1502,7 +1665,7 @@
     const cfg = GitHubAPI.getConfig();
     DOM.cfgOwner.value = cfg.owner || '';
     DOM.cfgRepo.value = cfg.repo || '';
-    DOM.cfgPath.value = cfg.path || 'slovicka_de_400.json';
+    DOM.cfgPath.value = cfg.path || GitHubAPI.getDefaultPath();
     DOM.cfgPat.value = cfg.pat || '';
   }
 
@@ -1510,7 +1673,7 @@
     const cfg = {
       owner: DOM.cfgOwner.value.trim(),
       repo: DOM.cfgRepo.value.trim(),
-      path: DOM.cfgPath.value.trim() || 'slovicka_de_400.json',
+      path: DOM.cfgPath.value.trim() || GitHubAPI.getDefaultPath(),
       pat: DOM.cfgPat.value.trim()
     };
 
@@ -1545,7 +1708,7 @@
     const cfg = {
       owner: DOM.cfgOwner.value.trim(),
       repo: DOM.cfgRepo.value.trim(),
-      path: DOM.cfgPath.value.trim() || 'slovicka_de_400.json',
+      path: DOM.cfgPath.value.trim() || GitHubAPI.getDefaultPath(),
       pat: DOM.cfgPat.value.trim()
     };
 
@@ -1574,6 +1737,14 @@
   // 8. EVENT LISTENERS & ROUTING
   // ==========================================================================
   function setupEventListeners() {
+    // Language Switcher
+    if (DOM.btnLangDe) {
+      DOM.btnLangDe.addEventListener('click', () => switchLanguage('de'));
+    }
+    if (DOM.btnLangEn) {
+      DOM.btnLangEn.addEventListener('click', () => switchLanguage('en'));
+    }
+
     // Navigation Tabs
     DOM.navBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1664,7 +1835,7 @@
         if (state.reviewQueue.length === 0) return;
         const currentEntry = state.reviewQueue[state.currentReviewIndex];
         const word = state.vocabulary[currentEntry.index] || currentEntry.item;
-        speakTextGerman(word.german);
+        speakTextGerman(getForeignWord(word));
       });
     }
 
