@@ -141,10 +141,11 @@
     "pronunciation": "edept",
     "czech": "upravit",
     "story": "Firma UPRAVILA zákazníkovi cenovou nabídku, že k tomu dostal navíc ještě kamion ADAPTérů (psaná forma).",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
-    "lesson": "Obecné 2 - Lekce 7"
+    "lesson": "Obecné 2 - Lekce 7",
+    "learned": true
   },
   {
     "english": "adaptation",
@@ -161,20 +162,22 @@
     "pronunciation": "e dej",
     "czech": "denně",
     "story": "Kuřák kouří DENNĚ 5 Elektronických cigaret s obrázkem DEJdara.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "16.2.2023",
-    "lesson": "Volný čas 1 - Lekce 15"
+    "lesson": "Volný čas 1 - Lekce 15",
+    "learned": true
   },
   {
     "english": "add",
     "pronunciation": "ed",
     "czech": "dodat",
     "story": "Moderátor k  této famózní řeči jen DODAL, že teď zazpívá ED Sheeran.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "27.1.2023",
-    "lesson": "Obecné 2 - Lekce 9"
+    "lesson": "Obecné 2 - Lekce 9",
+    "learned": true
   },
   {
     "english": "addicted",
