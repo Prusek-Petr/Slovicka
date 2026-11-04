@@ -7304,10 +7304,12 @@
     "pronunciation": "daktr",
     "czech": "doktor, lékař",
     "story": "Váš DOKTOR zavřel ordinaci, protože chce jet DAKar (rallye Paříž - Dakar) a TRoubí u toho jako šílenec.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
-    "lesson": "Zdraví 1 - Lekce 1"
+    "lesson": "Zdraví 1 - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1793833968882
   },
   {
     "english": "document",
