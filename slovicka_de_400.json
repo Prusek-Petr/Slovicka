@@ -2087,7 +2087,8 @@
     "repetition": "0x",
     "last_reviewed": "-",
     "date_learned": "-",
-    "lesson": "Duolingo 40"
+    "lesson": "Duolingo 40",
+    "problematic": false
   },
   {
     "german": "in der Nähe",
@@ -3744,10 +3745,11 @@
     "pronunciation": "á",
     "czech": "A, ≅ M",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "4.11.2026",
     "date_learned": "-",
-    "lesson": "Duolingo 73"
+    "lesson": "Duolingo 73",
+    "learned": true
   },
   {
     "german": "und",
