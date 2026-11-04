@@ -7304,12 +7304,12 @@
     "pronunciation": "daktr",
     "czech": "doktor, lékař",
     "story": "Váš DOKTOR zavřel ordinaci, protože chce jet DAKar (rallye Paříž - Dakar) a TRoubí u toho jako šílenec.",
-    "repetition": "1x",
+    "repetition": "2x",
     "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
     "lesson": "Zdraví 1 - Lekce 1",
     "learned": true,
-    "last_reviewed_ts": 1793833968882
+    "last_reviewed_ts": 1793833995172
   },
   {
     "english": "document",
@@ -11446,10 +11446,12 @@
     "pronunciation": "helsi",
     "czech": "zdravý",
     "story": "Představte si sekci ZDRAVÉ výživy v obchodě, kde vše pochází z HELSInek a produkty na sobě mají fotku Helsinek.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "2x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
-    "lesson": "Zdraví 1 - Lekce 1"
+    "lesson": "Zdraví 1 - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1793833996775
   },
   {
     "english": "hear",
@@ -12136,10 +12138,12 @@
     "pronunciation": "hrt",
     "czech": "poranit, bolet",
     "story": "Kůň se PORANIL při Velké pardubické o HRoT nad příkopem.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "2x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
-    "lesson": "Zdraví 1 - Lekce 1"
+    "lesson": "Zdraví 1 - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1793833997783
   },
   {
     "english": "husband",
@@ -17796,10 +17800,12 @@
     "pronunciation": "pil",
     "czech": "prášek, pilulka",
     "story": "Babička si po ránu půlí PRÁŠKY motorovou PILou.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "2x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
-    "lesson": "Zdraví 1 - Lekce 1"
+    "lesson": "Zdraví 1 - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1793833998887
   },
   {
     "english": "pillar",
@@ -26636,10 +26642,12 @@
     "pronunciation": "wík",
     "czech": "slabý",
     "story": "Po dlouhé nemoci byl tak SLABÝ, že nezvedl ani VÍKo, pod kterým měl prášky.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "5.11.2026",
     "date_learned": "24.1.2023",
-    "lesson": "Zdraví 1 - Lekce 1"
+    "lesson": "Zdraví 1 - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1793833993164
   },
   {
     "english": "weapon",
