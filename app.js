@@ -38,6 +38,7 @@
     listLessonFilter: 'ALL',
     listStatusFilter: 'ALL',
     listSortBy: 'DEFAULT',
+    expandedStatsCategories: {},
   };
 
   // ==========================================================================
@@ -1416,32 +1417,80 @@
     DOM.statUnlearned.textContent = unlearned;
     DOM.statMastery.textContent = `${masteryPct} %`;
 
-    // Lesson Breakdown
-    const lessonsMap = {};
-    state.vocabulary.forEach(w => {
-      const les = w.lesson || 'Ostatní';
-      if (!lessonsMap[les]) lessonsMap[les] = { total: 0, learned: 0 };
-      lessonsMap[les].total++;
-      if (isWordLearned(w)) lessonsMap[les].learned++;
+    // Category & Lesson Breakdown (Collapsible)
+    const hierarchy = buildHierarchyStats();
+    const priorityOrder = ['Duolingo 1', 'Duolingo 2', 'Duolingo 3', 'Základy', 'Úvodní lekce 1'];
+    const catKeys = Object.keys(hierarchy).sort((a, b) => {
+      const idxA = priorityOrder.indexOf(a);
+      const idxB = priorityOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return naturalSort(a, b);
     });
 
     DOM.lessonsBreakdown.innerHTML = '';
-    Object.keys(lessonsMap).sort().forEach(lesKey => {
-      const data = lessonsMap[lesKey];
-      const pct = Math.round((data.learned / data.total) * 100);
 
-      const div = document.createElement('div');
-      div.className = 'lesson-bar-item';
-      div.innerHTML = `
-        <div class="bar-header">
-          <span>${escapeHtml(lesKey)}</span>
-          <span>${data.learned} / ${data.total} (${pct} %)</span>
+    catKeys.forEach(catKey => {
+      const catData = hierarchy[catKey];
+      const catPct = catData.total > 0 ? Math.round((catData.learned / catData.total) * 100) : 0;
+      const subKeys = Object.keys(catData.subcategories).sort((a, b) => {
+        return naturalSort(catData.subcategories[a].subName, catData.subcategories[b].subName);
+      });
+      const subCount = subKeys.length;
+      const isExpanded = Boolean(state.expandedStatsCategories[catKey]);
+
+      const groupEl = document.createElement('div');
+      groupEl.className = `stats-category-group ${isExpanded ? 'expanded' : ''}`.trim();
+
+      const headerBtn = document.createElement('button');
+      headerBtn.type = 'button';
+      headerBtn.className = 'stats-category-header';
+      headerBtn.innerHTML = `
+        <div class="stats-cat-top">
+          <div class="stats-cat-title">
+            <span class="stats-chevron">▶</span>
+            <span>${getCategoryIcon(catKey)} ${escapeHtml(catKey)}</span>
+            <span class="stats-cat-subcount">${subCount} ${subCount === 1 ? 'lekce' : (subCount >= 2 && subCount <= 4 ? 'lekce' : 'lekcí')}</span>
+          </div>
+          <div class="stats-cat-meta">
+            <span>${catData.learned} / ${catData.total} (${catPct} %)</span>
+          </div>
         </div>
         <div class="bar-track">
-          <div class="bar-fill" style="width: ${pct}%;"></div>
+          <div class="bar-fill" style="width: ${catPct}%; ${catPct === 100 ? 'background-color: var(--accent-green);' : ''}"></div>
         </div>
       `;
-      DOM.lessonsBreakdown.appendChild(div);
+
+      headerBtn.addEventListener('click', () => {
+        state.expandedStatsCategories[catKey] = !state.expandedStatsCategories[catKey];
+        groupEl.classList.toggle('expanded', state.expandedStatsCategories[catKey]);
+      });
+
+      const bodyEl = document.createElement('div');
+      bodyEl.className = 'stats-category-body';
+
+      subKeys.forEach(fullLessonKey => {
+        const subData = catData.subcategories[fullLessonKey];
+        const subPct = subData.total > 0 ? Math.round((subData.learned / subData.total) * 100) : 0;
+
+        const subItem = document.createElement('div');
+        subItem.className = 'lesson-bar-item';
+        subItem.innerHTML = `
+          <div class="bar-header">
+            <span>📘 ${escapeHtml(subData.subName)}</span>
+            <span>${subData.learned} / ${subData.total} (${subPct} %)</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${subPct}%; ${subPct === 100 ? 'background-color: var(--accent-green);' : ''}"></div>
+          </div>
+        `;
+        bodyEl.appendChild(subItem);
+      });
+
+      groupEl.appendChild(headerBtn);
+      groupEl.appendChild(bodyEl);
+      DOM.lessonsBreakdown.appendChild(groupEl);
     });
   }
 
