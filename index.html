@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="stylesheet" href="./style.css?v=5">
+  <link rel="stylesheet" href="./style.css?v=6">
 </head>
 <body>
 
@@ -43,6 +43,10 @@
     <button class="nav-btn active" data-tab="tab-practice">
       <span class="nav-icon">🎴</span>
       <span class="nav-label">Kartičky</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-review">
+      <span class="nav-icon">🔁</span>
+      <span class="nav-label">Opakování</span>
     </button>
     <button class="nav-btn" data-tab="tab-list">
       <span class="nav-icon">📚</span>
@@ -121,7 +125,10 @@
             <div class="card-face card-front">
               <div class="card-header">
                 <span id="card-lesson-tag" class="lesson-tag">Lekce</span>
-                <button id="btn-speak" class="speak-btn" title="Přečíst německy">🔊</button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button id="btn-card-toggle-prob" class="status-pill pill-problematic-off" title="Označit / odznačit jako problémové">⚠️ Problémové</button>
+                  <button id="btn-speak" class="speak-btn" title="Přečíst německy">🔊</button>
+                </div>
               </div>
               
               <div class="card-body">
@@ -179,6 +186,108 @@
       <select id="practice-lesson-select" style="display: none;">
         <option value="ALL">Všechny lekce</option>
       </select>
+    </section>
+
+
+    <!-- TAB 1B: REVIEW / OPAKOVÁNÍ -->
+    <section id="tab-review" class="tab-content">
+      <!-- STEP 1: Review Modes Menu -->
+      <div id="review-menu-view" class="tiles-view">
+        <div class="section-header">
+          <h3 class="section-title">🔁 Speciální režimy opakování</h3>
+        </div>
+        <p class="modal-desc" style="margin-bottom: 18px;">
+          Vyberte si cílený trénink zaměřený na problémová nebo naposledy procvičovaná slovíčka.
+        </p>
+
+        <div id="review-modes-grid" class="tiles-grid">
+          <!-- Rendered dynamically with live counts -->
+        </div>
+      </div>
+
+      <!-- STEP 2: Active Review Flashcard Area -->
+      <div id="review-flashcard-view" style="display: none;">
+        <div class="section-header">
+          <button id="btn-back-to-review-menu" class="btn-back">⬅ Zpět na výběr opakování</button>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button id="btn-reshuffle-review" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; display: none;">🎲 Nová pětice</button>
+            <span id="review-mode-title" class="active-lesson-badge">Opakování</span>
+          </div>
+        </div>
+
+        <div class="practice-progress-container">
+          <div class="progress-bar">
+            <div id="review-progress-fill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-info">
+            <span id="review-count">Karta 0 z 0</span>
+            <span id="review-percent">0 %</span>
+          </div>
+        </div>
+
+        <!-- Review Flashcard Area -->
+        <div id="review-flashcard-wrapper" class="flashcard-wrapper">
+          <div id="review-flashcard" class="flashcard">
+            <!-- Card Front -->
+            <div class="card-face card-front">
+              <div class="card-header">
+                <span id="review-card-lesson-tag" class="lesson-tag">Lekce</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button id="btn-review-toggle-prob" class="status-pill pill-problematic-off" title="Označit / odznačit jako problémové">⚠️ Problémové</button>
+                  <button id="btn-review-speak" class="speak-btn" title="Přečíst německy">🔊</button>
+                </div>
+              </div>
+              
+              <div class="card-body">
+                <h2 id="review-card-german" class="german-word">Wort</h2>
+                <p id="review-card-pronunciation" class="pronunciation">[výslovnost]</p>
+              </div>
+
+              <div id="review-card-story-box" class="story-box">
+                <span class="story-title">💡 Mnemotechnická pomůcka:</span>
+                <p id="review-card-story" class="story-text">-</p>
+              </div>
+
+              <div class="card-footer">
+                <span class="flip-hint">👆 Klikni pro otočení překladu</span>
+              </div>
+            </div>
+
+            <!-- Card Back -->
+            <div class="card-face card-back">
+              <div class="card-header">
+                <span class="translation-title">Český překlad</span>
+                <span id="review-card-rep-badge" class="rep-badge">0x</span>
+              </div>
+
+              <div class="card-body">
+                <h2 id="review-card-czech" class="czech-word">Slovo</h2>
+                <p id="review-card-last-reviewed" class="last-reviewed">Poslední revize: -</p>
+              </div>
+
+              <div class="card-footer">
+                <span class="flip-hint">👆 Klikni pro zpětné otočení</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review Action Buttons -->
+        <div class="practice-actions">
+          <button id="btn-review-dont-know" class="action-btn btn-wrong">
+            <span class="btn-icon">❌</span>
+            <span class="btn-label">Nevím</span>
+          </button>
+          <button id="btn-review-flip" class="action-btn btn-flip-action">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-label">Otočit</span>
+          </button>
+          <button id="btn-review-know" class="action-btn btn-correct">
+            <span class="btn-icon">✅</span>
+            <span class="btn-label">Vím</span>
+          </button>
+        </div>
+      </div>
     </section>
 
 
@@ -432,6 +541,6 @@
   </div>
 
   <!-- Main JS -->
-  <script src="./app.js?v=5"></script>
+  <script src="./app.js?v=6"></script>
 </body>
 </html>

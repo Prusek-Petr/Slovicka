@@ -25,6 +25,13 @@
     practiceQueue: [],
     currentPracticeIndex: 0,
     isFlipped: false,
+
+    // Review Tab State
+    reviewStep: 'menu',         // 'menu' | 'flashcards'
+    reviewMode: null,           // 'RANDOM_5_PROB' | 'LAST_5_REVIEWED' | 'ALL_PROB'
+    reviewQueue: [],
+    currentReviewIndex: 0,
+    isReviewFlipped: false,
     
     // List Tab State
     searchQuery: '',
@@ -207,6 +214,7 @@
     flashcardWrapper: document.getElementById('flashcard-wrapper'),
     flashcard: document.getElementById('flashcard'),
     cardLessonTag: document.getElementById('card-lesson-tag'),
+    btnCardToggleProb: document.getElementById('btn-card-toggle-prob'),
     btnSpeak: document.getElementById('btn-speak'),
     cardGerman: document.getElementById('card-german'),
     cardPronunciation: document.getElementById('card-pronunciation'),
@@ -219,6 +227,31 @@
     btnDontKnow: document.getElementById('btn-dont-know'),
     btnFlip: document.getElementById('btn-flip'),
     btnKnow: document.getElementById('btn-know'),
+
+    // Review Tab
+    reviewMenuView: document.getElementById('review-menu-view'),
+    reviewModesGrid: document.getElementById('review-modes-grid'),
+    reviewFlashcardView: document.getElementById('review-flashcard-view'),
+    btnBackToReviewMenu: document.getElementById('btn-back-to-review-menu'),
+    btnReshuffleReview: document.getElementById('btn-reshuffle-review'),
+    reviewModeTitle: document.getElementById('review-mode-title'),
+    reviewProgressFill: document.getElementById('review-progress-fill'),
+    reviewCount: document.getElementById('review-count'),
+    reviewPercent: document.getElementById('review-percent'),
+    reviewFlashcard: document.getElementById('review-flashcard'),
+    reviewCardLessonTag: document.getElementById('review-card-lesson-tag'),
+    btnReviewToggleProb: document.getElementById('btn-review-toggle-prob'),
+    btnReviewSpeak: document.getElementById('btn-review-speak'),
+    reviewCardGerman: document.getElementById('review-card-german'),
+    reviewCardPronunciation: document.getElementById('review-card-pronunciation'),
+    reviewCardStoryBox: document.getElementById('review-card-story-box'),
+    reviewCardStory: document.getElementById('review-card-story'),
+    reviewCardCzech: document.getElementById('review-card-czech'),
+    reviewCardRepBadge: document.getElementById('review-card-rep-badge'),
+    reviewCardLastReviewed: document.getElementById('review-card-last-reviewed'),
+    btnReviewDontKnow: document.getElementById('btn-review-dont-know'),
+    btnReviewFlip: document.getElementById('btn-review-flip'),
+    btnReviewKnow: document.getElementById('btn-review-know'),
     
     // List Tab
     listSearchInput: document.getElementById('list-search-input'),
@@ -306,6 +339,7 @@
     populateLessonDropdowns();
     renderPracticeHierarchy();
     updatePracticeQueue();
+    renderReviewMenu();
     renderTable();
     renderStats();
   }
@@ -748,6 +782,7 @@
       DOM.cardStoryBox.style.display = 'none';
       DOM.cardRepBadge.textContent = '0x';
       DOM.cardLastReviewed.textContent = '';
+      if (DOM.btnCardToggleProb) DOM.btnCardToggleProb.style.display = 'none';
       
       DOM.practiceProgressFill.style.width = '100%';
       DOM.practiceCount.textContent = '0 z 0';
@@ -768,6 +803,13 @@
     DOM.cardLessonTag.textContent = word.lesson || 'Všeobecné';
     DOM.cardRepBadge.textContent = word.repetition || '0x';
     DOM.cardLastReviewed.textContent = `Poslední revize: ${word.last_reviewed || 'nikdy'}`;
+
+    if (DOM.btnCardToggleProb) {
+      DOM.btnCardToggleProb.style.display = 'inline-flex';
+      const isProb = isWordProblematic(word);
+      DOM.btnCardToggleProb.className = isProb ? 'status-pill pill-problematic' : 'status-pill pill-problematic-off';
+      DOM.btnCardToggleProb.textContent = isProb ? '⚠️ Problémové' : '⚠️ Označit problémové';
+    }
 
     if (word.story && word.story !== '-') {
       DOM.cardStoryBox.style.display = 'block';
@@ -812,6 +854,7 @@
     targetWord.repetition = `${newReps}x`;
     targetWord.learned = newReps > 0;
     targetWord.last_reviewed = getTodayFormatted();
+    targetWord.last_reviewed_ts = Date.now();
 
     // Reset card flip
     state.isFlipped = false;
@@ -825,6 +868,7 @@
       }
       renderPracticeCard();
       renderPracticeHierarchy();
+      renderReviewMenu();
       renderStats();
     }, 200);
 
@@ -832,17 +876,248 @@
     triggerAutoSave(`Update '${targetWord.german}': ${targetWord.repetition}`);
   }
 
-  function speakGermanWord() {
-    if (state.practiceQueue.length === 0) return;
-    const currentEntry = state.practiceQueue[state.currentPracticeIndex];
-    const text = currentEntry.item.german;
+  function speakTextGerman(text) {
     if (!text || !('speechSynthesis' in window)) return;
-
-    // Clean article prefix for speech synthesis if needed, or speak full word
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'de-DE';
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
+  }
+
+  function speakGermanWord() {
+    if (state.practiceQueue.length === 0) return;
+    const currentEntry = state.practiceQueue[state.currentPracticeIndex];
+    speakTextGerman(currentEntry.item.german);
+  }
+
+  // ==========================================================================
+  // 4B. SPECIAL REVIEW MODULE (OPAKOVÁNÍ)
+  // ==========================================================================
+  function parseReviewTimestamp(word) {
+    if (!word) return 0;
+    if (typeof word.last_reviewed_ts === 'number' && word.last_reviewed_ts > 0) {
+      return word.last_reviewed_ts;
+    }
+    const str = (word.last_reviewed || '').trim();
+    if (!str || str === '-') return 0;
+
+    // Parse D.M.YYYY
+    const czMatch = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (czMatch) {
+      const day = parseInt(czMatch[1], 10);
+      const month = parseInt(czMatch[2], 10) - 1;
+      const year = parseInt(czMatch[3], 10);
+      return new Date(year, month, day).getTime();
+    }
+
+    const parsed = Date.parse(str);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  function getProblematicEntries() {
+    return state.vocabulary
+      .map((item, index) => ({ item, index }))
+      .filter(x => isWordProblematic(x.item));
+  }
+
+  function getLastReviewedEntries(limit = 5) {
+    return state.vocabulary
+      .map((item, index) => ({ item, index, ts: parseReviewTimestamp(item), reps: parseRepetitionCount(item.repetition) }))
+      .filter(x => x.ts > 0 || x.reps > 0)
+      .sort((a, b) => {
+        if (b.ts !== a.ts) return b.ts - a.ts;
+        return b.reps - a.reps;
+      })
+      .slice(0, limit)
+      .map(({ item, index }) => ({ item, index }));
+  }
+
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function renderReviewMenu() {
+    if (!DOM.reviewModesGrid) return;
+
+    DOM.reviewMenuView.style.display = state.reviewStep === 'menu' ? 'block' : 'none';
+    DOM.reviewFlashcardView.style.display = state.reviewStep === 'flashcards' ? 'block' : 'none';
+
+    const probEntries = getProblematicEntries();
+    const probCount = probEntries.length;
+    const probLearned = probEntries.filter(x => isWordLearned(x.item)).length;
+    const random5Count = Math.min(5, probCount);
+
+    const last5Entries = getLastReviewedEntries(5);
+    const last5Count = last5Entries.length;
+    const last5Learned = last5Entries.filter(x => isWordLearned(x.item)).length;
+
+    DOM.reviewModesGrid.innerHTML = '';
+
+    // Tile 1: 5 náhodných problémových slov
+    const tileRandom5 = createTileElement({
+      icon: '🎲',
+      title: 'Opakování 5 náhodných problémových slov',
+      subtitle: probCount > 0
+        ? `Náhodný výběr ${random5Count} z ${probCount} problémových slovíček`
+        : 'Zatím nemáte označena žádná problémová slovíčka (⚠️)',
+      total: random5Count,
+      learned: Math.min(random5Count, probLearned),
+      badgeText: `${random5Count} slov`,
+      extraClass: 'tile-all',
+      onClick: () => startReviewSession('RANDOM_5_PROB')
+    });
+    DOM.reviewModesGrid.appendChild(tileRandom5);
+
+    // Tile 2: 5 naposledy zopakovaných
+    const tileLast5 = createTileElement({
+      icon: '🕒',
+      title: '5 naposledy zopakovaných',
+      subtitle: last5Count > 0
+        ? 'Rychlé osvěžení posledních 5 procvičovaných slovíček'
+        : 'Zatím nebyla zopakována žádná slovíčka',
+      total: last5Count,
+      learned: last5Learned,
+      badgeText: `${last5Count} slov`,
+      onClick: () => startReviewSession('LAST_5_REVIEWED')
+    });
+    DOM.reviewModesGrid.appendChild(tileLast5);
+
+    // Tile 3: Opakování problémových slovíček (všechna)
+    const tileAllProb = createTileElement({
+      icon: '⚠️',
+      title: 'Opakování problémových slovíček',
+      subtitle: probCount > 0
+        ? `Kompletní procvičení všech ${probCount} problémových slovíček`
+        : 'Označte těžká slovíčka symbolem ⚠️ v seznamu nebo na kartičce',
+      total: probCount,
+      learned: probLearned,
+      badgeText: `${probCount} slov`,
+      onClick: () => startReviewSession('ALL_PROB')
+    });
+    DOM.reviewModesGrid.appendChild(tileAllProb);
+  }
+
+  function startReviewSession(mode) {
+    state.reviewMode = mode;
+    state.reviewStep = 'flashcards';
+    state.currentReviewIndex = 0;
+    state.isReviewFlipped = false;
+    DOM.reviewFlashcard.classList.remove('flipped');
+
+    if (mode === 'RANDOM_5_PROB') {
+      state.reviewQueue = shuffleArray(getProblematicEntries()).slice(0, 5);
+      DOM.reviewModeTitle.textContent = '🎲 5 náhodných problémových';
+      if (DOM.btnReshuffleReview) DOM.btnReshuffleReview.style.display = 'inline-flex';
+    } else if (mode === 'LAST_5_REVIEWED') {
+      state.reviewQueue = getLastReviewedEntries(5);
+      DOM.reviewModeTitle.textContent = '🕒 5 naposledy zopakovaných';
+      if (DOM.btnReshuffleReview) DOM.btnReshuffleReview.style.display = 'none';
+    } else if (mode === 'ALL_PROB') {
+      state.reviewQueue = getProblematicEntries();
+      DOM.reviewModeTitle.textContent = '⚠️ Všechna problémová slovíčka';
+      if (DOM.btnReshuffleReview) DOM.btnReshuffleReview.style.display = 'none';
+    }
+
+    renderReviewMenu();
+    renderReviewCard();
+  }
+
+  function renderReviewCard() {
+    const queueLength = state.reviewQueue.length;
+
+    if (queueLength === 0) {
+      DOM.reviewCardGerman.textContent = '🎉 Žádná slovíčka!';
+      DOM.reviewCardPronunciation.textContent = state.reviewMode === 'LAST_5_REVIEWED'
+        ? 'Zatím jste neprocvičili žádná slovíčka.'
+        : 'Zatím nemáte označena žádná problémová slovíčka (⚠️).';
+      DOM.reviewCardCzech.textContent = 'Označte si slovíčka v seznamu nebo při tréninku!';
+      DOM.reviewCardLessonTag.textContent = '-';
+      DOM.reviewCardStoryBox.style.display = 'none';
+      DOM.reviewCardRepBadge.textContent = '0x';
+      DOM.reviewCardLastReviewed.textContent = '';
+      if (DOM.btnReviewToggleProb) DOM.btnReviewToggleProb.style.display = 'none';
+
+      DOM.reviewProgressFill.style.width = '100%';
+      DOM.reviewCount.textContent = '0 z 0';
+      DOM.reviewPercent.textContent = '100 %';
+      return;
+    }
+
+    if (state.currentReviewIndex >= queueLength) {
+      state.currentReviewIndex = 0;
+    }
+
+    const currentEntry = state.reviewQueue[state.currentReviewIndex];
+    const word = state.vocabulary[currentEntry.index] || currentEntry.item;
+
+    DOM.reviewCardGerman.textContent = word.german || '-';
+    DOM.reviewCardPronunciation.textContent = word.pronunciation ? `[${word.pronunciation}]` : '';
+    DOM.reviewCardCzech.textContent = word.czech || '-';
+    DOM.reviewCardLessonTag.textContent = word.lesson || 'Všeobecné';
+    DOM.reviewCardRepBadge.textContent = word.repetition || '0x';
+    DOM.reviewCardLastReviewed.textContent = `Poslední revize: ${word.last_reviewed || 'nikdy'}`;
+
+    if (DOM.btnReviewToggleProb) {
+      DOM.btnReviewToggleProb.style.display = 'inline-flex';
+      const isProb = isWordProblematic(word);
+      DOM.btnReviewToggleProb.className = isProb ? 'status-pill pill-problematic' : 'status-pill pill-problematic-off';
+      DOM.btnReviewToggleProb.textContent = isProb ? '⚠️ Problémové' : '⚠️ Označit problémové';
+    }
+
+    if (word.story && word.story !== '-') {
+      DOM.reviewCardStoryBox.style.display = 'block';
+      DOM.reviewCardStory.textContent = word.story;
+    } else {
+      DOM.reviewCardStoryBox.style.display = 'none';
+    }
+
+    const currentNum = state.currentReviewIndex + 1;
+    const pct = Math.round((currentNum / queueLength) * 100);
+    DOM.reviewProgressFill.style.width = `${pct}%`;
+    DOM.reviewCount.textContent = `Karta ${currentNum} z ${queueLength}`;
+    DOM.reviewPercent.textContent = `${pct} %`;
+  }
+
+  function flipReviewCard() {
+    state.isReviewFlipped = !state.isReviewFlipped;
+    DOM.reviewFlashcard.classList.toggle('flipped', state.isReviewFlipped);
+  }
+
+  async function handleReviewAction(isCorrect) {
+    if (state.reviewQueue.length === 0) return;
+
+    const currentEntry = state.reviewQueue[state.currentReviewIndex];
+    const targetWord = state.vocabulary[currentEntry.index];
+
+    const currentReps = parseRepetitionCount(targetWord.repetition);
+    const newReps = isCorrect ? currentReps + 1 : Math.max(0, currentReps - 1);
+
+    targetWord.repetition = `${newReps}x`;
+    targetWord.learned = newReps > 0;
+    targetWord.last_reviewed = getTodayFormatted();
+    targetWord.last_reviewed_ts = Date.now();
+
+    state.isReviewFlipped = false;
+    DOM.reviewFlashcard.classList.remove('flipped');
+
+    setTimeout(() => {
+      state.currentReviewIndex++;
+      if (state.currentReviewIndex >= state.reviewQueue.length) {
+        state.currentReviewIndex = 0;
+      }
+      renderReviewCard();
+      renderReviewMenu();
+      renderPracticeHierarchy();
+      renderTable();
+      renderStats();
+    }, 200);
+
+    triggerAutoSave(`Review '${targetWord.german}': ${targetWord.repetition}`);
   }
 
 
@@ -1280,15 +1555,68 @@
     });
 
     DOM.flashcard.addEventListener('click', (e) => {
-      // Don't flip card if speak button was clicked
-      if (e.target.closest('#btn-speak')) return;
+      // Don't flip card if speak or problematic button was clicked
+      if (e.target.closest('#btn-speak') || e.target.closest('#btn-card-toggle-prob')) return;
       flipCard();
     });
+
+    if (DOM.btnCardToggleProb) {
+      DOM.btnCardToggleProb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.practiceQueue.length === 0) return;
+        const currentEntry = state.practiceQueue[state.currentPracticeIndex];
+        toggleWordProblematic(currentEntry.index);
+        renderPracticeCard();
+      });
+    }
 
     DOM.btnFlip.addEventListener('click', flipCard);
     DOM.btnKnow.addEventListener('click', () => handlePracticeAction(true));
     DOM.btnDontKnow.addEventListener('click', () => handlePracticeAction(false));
     DOM.btnSpeak.addEventListener('click', speakGermanWord);
+
+    // Review Tab controls
+    if (DOM.btnBackToReviewMenu) {
+      DOM.btnBackToReviewMenu.addEventListener('click', () => {
+        state.reviewStep = 'menu';
+        renderReviewMenu();
+      });
+    }
+
+    if (DOM.btnReshuffleReview) {
+      DOM.btnReshuffleReview.addEventListener('click', () => {
+        startReviewSession('RANDOM_5_PROB');
+      });
+    }
+
+    if (DOM.reviewFlashcard) {
+      DOM.reviewFlashcard.addEventListener('click', (e) => {
+        if (e.target.closest('#btn-review-speak') || e.target.closest('#btn-review-toggle-prob')) return;
+        flipReviewCard();
+      });
+    }
+
+    if (DOM.btnReviewToggleProb) {
+      DOM.btnReviewToggleProb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.reviewQueue.length === 0) return;
+        const currentEntry = state.reviewQueue[state.currentReviewIndex];
+        toggleWordProblematic(currentEntry.index);
+        renderReviewCard();
+      });
+    }
+
+    if (DOM.btnReviewFlip) DOM.btnReviewFlip.addEventListener('click', flipReviewCard);
+    if (DOM.btnReviewKnow) DOM.btnReviewKnow.addEventListener('click', () => handleReviewAction(true));
+    if (DOM.btnReviewDontKnow) DOM.btnReviewDontKnow.addEventListener('click', () => handleReviewAction(false));
+    if (DOM.btnReviewSpeak) {
+      DOM.btnReviewSpeak.addEventListener('click', () => {
+        if (state.reviewQueue.length === 0) return;
+        const currentEntry = state.reviewQueue[state.currentReviewIndex];
+        const word = state.vocabulary[currentEntry.index] || currentEntry.item;
+        speakTextGerman(word.german);
+      });
+    }
 
     // List controls & CRUD
     DOM.listSearchInput.addEventListener('input', (e) => {
@@ -1401,19 +1729,32 @@
       });
     });
 
-    // Keyboard Shortcuts for Practice Mode
+    // Keyboard Shortcuts for Practice & Review Modes
     document.addEventListener('keydown', (e) => {
-      const isPracticeActive = document.getElementById('tab-practice').classList.contains('active');
       const isModalActive = document.querySelector('.modal-overlay.active');
-      if (!isPracticeActive || isModalActive || state.practiceStep !== 'flashcards') return;
+      if (isModalActive) return;
 
-      if (e.code === 'Space') {
-        e.preventDefault();
-        flipCard();
-      } else if (e.code === 'ArrowRight' || e.code === 'KeyV') {
-        handlePracticeAction(true);
-      } else if (e.code === 'ArrowLeft' || e.code === 'KeyN') {
-        handlePracticeAction(false);
+      const isPracticeActive = document.getElementById('tab-practice').classList.contains('active') && state.practiceStep === 'flashcards';
+      const isReviewActive = document.getElementById('tab-review').classList.contains('active') && state.reviewStep === 'flashcards';
+
+      if (isPracticeActive) {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          flipCard();
+        } else if (e.code === 'ArrowRight' || e.code === 'KeyV') {
+          handlePracticeAction(true);
+        } else if (e.code === 'ArrowLeft' || e.code === 'KeyN') {
+          handlePracticeAction(false);
+        }
+      } else if (isReviewActive) {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          flipReviewCard();
+        } else if (e.code === 'ArrowRight' || e.code === 'KeyV') {
+          handleReviewAction(true);
+        } else if (e.code === 'ArrowLeft' || e.code === 'KeyN') {
+          handleReviewAction(false);
+        }
       }
     });
   }
