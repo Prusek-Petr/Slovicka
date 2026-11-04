@@ -1252,22 +1252,22 @@
       const learnedPillText = isLearned ? '✅ Naučeno' : '⏳ Nenaučeno';
 
       const probPillClass = isProb ? 'status-pill pill-problematic' : 'status-pill pill-problematic-off';
-      const probPillText = isProb ? '⚠️ Problémové' : '⚠️';
+      const probPillText = isProb ? '⚠️ Problém' : '⚠️';
       const probPillTitle = isProb ? 'Problémové slovíčko (kliknutím zrušíte)' : 'Kliknutím označíte jako problémové';
 
       tr.innerHTML = `
-        <td style="font-weight:700; color:#fff;">${escapeHtml(item.german || '')}</td>
-        <td style="color:var(--primary); font-style:italic;">${escapeHtml(item.pronunciation || '')}</td>
-        <td style="font-weight:600; color:var(--secondary);">${escapeHtml(item.czech || '')}</td>
-        <td>
+        <td class="cell-de">${escapeHtml(item.german || '')}</td>
+        <td class="cell-pron">${escapeHtml(item.pronunciation || '')}</td>
+        <td class="cell-cz">${escapeHtml(item.czech || '')}</td>
+        <td class="cell-nowrap">
           <div class="status-badges-wrap">
             <span class="${learnedPillClass} btn-toggle-learned" data-index="${originalIndex}" title="Kliknutím přepnete stav Naučeno / Nenaučeno">${learnedPillText}</span>
             <span class="${probPillClass} btn-toggle-problematic" data-index="${originalIndex}" title="${probPillTitle}">${probPillText}</span>
           </div>
         </td>
-        <td><span class="${repBadgeClass}">${escapeHtml(item.repetition || '0x')}</span></td>
-        <td><span class="lesson-tag">${escapeHtml(item.lesson || 'Ostatní')}</span></td>
-        <td>
+        <td class="cell-nowrap"><span class="${repBadgeClass}">${escapeHtml(item.repetition || '0x')}</span></td>
+        <td class="cell-nowrap"><span class="lesson-tag">${escapeHtml(item.lesson || 'Ostatní')}</span></td>
+        <td class="cell-nowrap">
           <div class="row-actions">
             <button class="btn-icon-action btn-edit" data-index="${originalIndex}" title="Upravit">✏️</button>
             <button class="btn-icon-action btn-icon-delete btn-delete" data-index="${originalIndex}" title="Smazat">🗑️</button>

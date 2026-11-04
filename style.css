@@ -216,7 +216,7 @@ body {
 /* Main Area & Tabs */
 .app-main {
   flex: 1;
-  max-width: 900px;
+  max-width: 1120px;
   width: 100%;
   margin: 0 auto;
   padding: 20px 16px 40px;
@@ -627,19 +627,19 @@ body {
 /* Status Pills & Modal Checkboxes */
 .status-badges-wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 5px;
   align-items: center;
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.74rem;
+  gap: 3px;
+  font-size: 0.72rem;
   font-weight: 800;
-  padding: 4px 9px;
-  border-radius: 12px;
+  padding: 3px 7px;
+  border-radius: 10px;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
@@ -747,20 +747,49 @@ body {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
 }
 
 .vocab-table th {
   background-color: #0f172a;
-  padding: 12px 14px;
+  padding: 9px 10px;
   color: var(--text-muted);
   font-weight: 700;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .vocab-table td {
-  padding: 12px 14px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  vertical-align: middle;
+}
+
+.cell-de {
+  font-weight: 700;
+  color: #fff;
+}
+
+.cell-pron {
+  color: var(--primary);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.cell-cz {
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+.cell-nowrap {
+  white-space: nowrap;
+}
+
+.vocab-table .lesson-tag,
+.vocab-table .rep-badge {
+  white-space: nowrap;
+  padding: 3px 8px;
+  font-size: 0.73rem;
 }
 
 .vocab-table tr:last-child td {
