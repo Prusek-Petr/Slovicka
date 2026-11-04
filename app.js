@@ -255,6 +255,8 @@
     wordCzech: document.getElementById('word-czech'),
     wordStory: document.getElementById('word-story'),
     wordLesson: document.getElementById('word-lesson'),
+    wordLearned: document.getElementById('word-learned'),
+    wordProblematic: document.getElementById('word-problematic'),
     btnSaveWord: document.getElementById('btn-save-word'),
   };
 
@@ -380,6 +382,16 @@
   // ==========================================================================
   // 4. PRACTICE / FLASHCARDS MODULE (HIERARCHICAL TILES)
   // ==========================================================================
+  function isWordLearned(word) {
+    if (!word) return false;
+    if (typeof word.learned === 'boolean') return word.learned;
+    return Boolean(word.repetition && word.repetition !== '0x');
+  }
+
+  function isWordProblematic(word) {
+    return Boolean(word && word.problematic);
+  }
+
   function parseLessonHierarchy(lessonStr) {
     const raw = (lessonStr || 'Ostatní').trim();
     if (raw.includes(' - ')) {
@@ -417,7 +429,7 @@
 
     state.vocabulary.forEach((word) => {
       const { category, subcategory, fullLesson } = parseLessonHierarchy(word.lesson);
-      const isLearned = Boolean(word.repetition && word.repetition !== '0x');
+      const isLearned = isWordLearned(word);
 
       if (!categoriesMap[category]) {
         categoriesMap[category] = {
@@ -590,7 +602,7 @@
 
       // Add "Všechny kategorie" tile at the end
       const totalWords = state.vocabulary.length;
-      const totalLearned = state.vocabulary.filter(w => w.repetition && w.repetition !== '0x').length;
+      const totalLearned = state.vocabulary.filter(w => isWordLearned(w)).length;
       if (totalWords > 0) {
         const allTile = createTileElement({
           icon: '🌟',
@@ -708,11 +720,13 @@
       items = items.filter(x => parseLessonHierarchy(x.item.lesson).category === state.selectedCategory);
     }
 
-    // Filter by learned status
+    // Filter by learned / problematic status
     if (selectedFilter === 'UNLEARNED') {
-      items = items.filter(x => !x.item.repetition || x.item.repetition === '0x');
+      items = items.filter(x => !isWordLearned(x.item));
     } else if (selectedFilter === 'LEARNED') {
-      items = items.filter(x => x.item.repetition && x.item.repetition !== '0x');
+      items = items.filter(x => isWordLearned(x.item));
+    } else if (selectedFilter === 'PROBLEMATIC') {
+      items = items.filter(x => isWordProblematic(x.item));
     }
 
     state.practiceQueue = items;
@@ -796,6 +810,7 @@
     const newReps = isCorrect ? currentReps + 1 : Math.max(0, currentReps - 1);
 
     targetWord.repetition = `${newReps}x`;
+    targetWord.learned = newReps > 0;
     targetWord.last_reviewed = getTodayFormatted();
 
     // Reset card flip
@@ -842,10 +857,12 @@
   function updateSortHeaderIndicators() {
     const indDE = document.getElementById('sort-ind-DE');
     const indCZ = document.getElementById('sort-ind-CZ');
+    const indSTATUS = document.getElementById('sort-ind-STATUS');
     const indREP = document.getElementById('sort-ind-REP');
 
     if (indDE) indDE.textContent = '';
     if (indCZ) indCZ.textContent = '';
+    if (indSTATUS) indSTATUS.textContent = '';
     if (indREP) indREP.textContent = '';
 
     const sort = state.listSortBy;
@@ -853,8 +870,11 @@
     else if (sort === 'DE_DESC' && indDE) indDE.textContent = '▼';
     else if (sort === 'CZ_ASC' && indCZ) indCZ.textContent = '▲';
     else if (sort === 'CZ_DESC' && indCZ) indCZ.textContent = '▼';
-    else if ((sort === 'REP_ASC' || sort === 'STATUS_UNLEARNED') && indREP) indREP.textContent = '▲';
-    else if ((sort === 'REP_DESC' || sort === 'STATUS_LEARNED') && indREP) indREP.textContent = '▼';
+    else if (sort === 'STATUS_UNLEARNED' && indSTATUS) indSTATUS.textContent = '▲';
+    else if (sort === 'STATUS_LEARNED' && indSTATUS) indSTATUS.textContent = '▼';
+    else if (sort === 'STATUS_PROBLEMATIC' && indSTATUS) indSTATUS.textContent = '⚠️';
+    else if (sort === 'REP_ASC' && indREP) indREP.textContent = '▲';
+    else if (sort === 'REP_DESC' && indREP) indREP.textContent = '▼';
   }
 
   function renderTable() {
@@ -868,7 +888,7 @@
     // Map with original index so CRUD operations always reference exact state.vocabulary index
     let entries = state.vocabulary.map((item, originalIndex) => ({ item, originalIndex }));
 
-    // 1. Filter by search, lesson, and learned status
+    // 1. Filter by search, lesson, and learned / problematic status
     entries = entries.filter(({ item }) => {
       const matchSearch = !search ||
         (item.german && item.german.toLowerCase().includes(search)) ||
@@ -876,12 +896,13 @@
 
       const matchLesson = lessonFilter === 'ALL' || (item.lesson || 'Ostatní') === lessonFilter;
 
-      const reps = parseRepetitionCount(item.repetition);
       let matchStatus = true;
       if (statusFilter === 'UNLEARNED') {
-        matchStatus = reps === 0;
+        matchStatus = !isWordLearned(item);
       } else if (statusFilter === 'LEARNED') {
-        matchStatus = reps > 0;
+        matchStatus = isWordLearned(item);
+      } else if (statusFilter === 'PROBLEMATIC') {
+        matchStatus = isWordProblematic(item);
       }
 
       return matchSearch && matchLesson && matchStatus;
@@ -914,8 +935,8 @@
           return repA !== repB ? repB - repA : cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
         }
 
-        const learnedA = repA > 0 ? 1 : 0;
-        const learnedB = repB > 0 ? 1 : 0;
+        const learnedA = isWordLearned(wA) ? 1 : 0;
+        const learnedB = isWordLearned(wB) ? 1 : 0;
 
         if (sortBy === 'STATUS_UNLEARNED') {
           if (learnedA !== learnedB) return learnedA - learnedB;
@@ -929,6 +950,14 @@
           return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
         }
 
+        if (sortBy === 'STATUS_PROBLEMATIC') {
+          const probA = isWordProblematic(wA) ? 1 : 0;
+          const probB = isWordProblematic(wB) ? 1 : 0;
+          if (probA !== probB) return probB - probA;
+          if (learnedA !== learnedB) return learnedA - learnedB;
+          return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+        }
+
         return 0;
       });
     }
@@ -938,16 +967,28 @@
 
     entries.forEach(({ item, originalIndex }) => {
       const tr = document.createElement('tr');
-      const reps = parseRepetitionCount(item.repetition);
-      const isLearned = reps > 0;
-      const badgeClass = isLearned ? 'rep-badge rep-badge-learned' : 'rep-badge rep-badge-zero';
-      const statusTitle = isLearned ? 'Naučeno / Probráno' : 'Nenaučeno (0x)';
+      const isLearned = isWordLearned(item);
+      const isProb = isWordProblematic(item);
+
+      const repBadgeClass = isLearned ? 'rep-badge rep-badge-learned' : 'rep-badge rep-badge-zero';
+      const learnedPillClass = isLearned ? 'status-pill pill-learned' : 'status-pill pill-unlearned';
+      const learnedPillText = isLearned ? '✅ Naučeno' : '⏳ Nenaučeno';
+
+      const probPillClass = isProb ? 'status-pill pill-problematic' : 'status-pill pill-problematic-off';
+      const probPillText = isProb ? '⚠️ Problémové' : '⚠️';
+      const probPillTitle = isProb ? 'Problémové slovíčko (kliknutím zrušíte)' : 'Kliknutím označíte jako problémové';
 
       tr.innerHTML = `
         <td style="font-weight:700; color:#fff;">${escapeHtml(item.german || '')}</td>
         <td style="color:var(--primary); font-style:italic;">${escapeHtml(item.pronunciation || '')}</td>
         <td style="font-weight:600; color:var(--secondary);">${escapeHtml(item.czech || '')}</td>
-        <td><span class="${badgeClass}" title="${statusTitle}">${isLearned ? '✅ ' : '⏳ '}${escapeHtml(item.repetition || '0x')}</span></td>
+        <td>
+          <div class="status-badges-wrap">
+            <span class="${learnedPillClass} btn-toggle-learned" data-index="${originalIndex}" title="Kliknutím přepnete stav Naučeno / Nenaučeno">${learnedPillText}</span>
+            <span class="${probPillClass} btn-toggle-problematic" data-index="${originalIndex}" title="${probPillTitle}">${probPillText}</span>
+          </div>
+        </td>
+        <td><span class="${repBadgeClass}">${escapeHtml(item.repetition || '0x')}</span></td>
         <td><span class="lesson-tag">${escapeHtml(item.lesson || 'Ostatní')}</span></td>
         <td>
           <div class="row-actions">
@@ -958,6 +999,34 @@
       `;
       DOM.vocabTableBody.appendChild(tr);
     });
+  }
+
+  function toggleWordLearned(index) {
+    const item = state.vocabulary[index];
+    if (!item) return;
+
+    const nextLearned = !isWordLearned(item);
+    item.learned = nextLearned;
+
+    const reps = parseRepetitionCount(item.repetition);
+    if (nextLearned && reps === 0) {
+      item.repetition = '1x';
+      item.last_reviewed = getTodayFormatted();
+    } else if (!nextLearned) {
+      item.repetition = '0x';
+    }
+
+    refreshAllViews();
+    triggerAutoSave(`Toggle learned '${item.german}': ${nextLearned}`);
+  }
+
+  function toggleWordProblematic(index) {
+    const item = state.vocabulary[index];
+    if (!item) return;
+
+    item.problematic = !isWordProblematic(item);
+    refreshAllViews();
+    triggerAutoSave(`Toggle problematic '${item.german}': ${item.problematic}`);
   }
 
   function escapeHtml(str) {
@@ -974,6 +1043,8 @@
     DOM.wordCzech.value = '';
     DOM.wordStory.value = '';
     DOM.wordLesson.value = 'Základy - Lekce 1';
+    if (DOM.wordLearned) DOM.wordLearned.checked = false;
+    if (DOM.wordProblematic) DOM.wordProblematic.checked = false;
     
     openModal(DOM.modalWord);
   }
@@ -989,6 +1060,8 @@
     DOM.wordCzech.value = item.czech || '';
     DOM.wordStory.value = item.story || '';
     DOM.wordLesson.value = item.lesson || '';
+    if (DOM.wordLearned) DOM.wordLearned.checked = isWordLearned(item);
+    if (DOM.wordProblematic) DOM.wordProblematic.checked = isWordProblematic(item);
 
     openModal(DOM.modalWord);
   }
@@ -1003,12 +1076,26 @@
       return;
     }
 
+    const isLearnedChecked = DOM.wordLearned ? DOM.wordLearned.checked : false;
+    const isProblematicChecked = DOM.wordProblematic ? DOM.wordProblematic.checked : false;
+
+    let currentRepetition = index >= 0 ? (state.vocabulary[index].repetition || '0x') : '0x';
+    const currentRepsNum = parseRepetitionCount(currentRepetition);
+
+    if (isLearnedChecked && currentRepsNum === 0) {
+      currentRepetition = '1x';
+    } else if (!isLearnedChecked) {
+      currentRepetition = '0x';
+    }
+
     const wordData = {
       german,
       pronunciation: DOM.wordPronunciation.value.trim(),
       czech,
       story: DOM.wordStory.value.trim() || '-',
-      repetition: index >= 0 ? state.vocabulary[index].repetition || '0x' : '0x',
+      repetition: currentRepetition,
+      learned: isLearnedChecked,
+      problematic: isProblematicChecked,
       last_reviewed: index >= 0 ? state.vocabulary[index].last_reviewed || '-' : '-',
       date_learned: index >= 0 ? state.vocabulary[index].date_learned || getTodayFormatted() : getTodayFormatted(),
       lesson: DOM.wordLesson.value.trim() || 'Všeobecné'
@@ -1044,7 +1131,7 @@
   // ==========================================================================
   function renderStats() {
     const total = state.vocabulary.length;
-    const learned = state.vocabulary.filter(w => w.repetition && w.repetition !== '0x').length;
+    const learned = state.vocabulary.filter(w => isWordLearned(w)).length;
     const unlearned = total - learned;
     const masteryPct = total > 0 ? Math.round((learned / total) * 100) : 0;
 
@@ -1059,7 +1146,7 @@
       const les = w.lesson || 'Ostatní';
       if (!lessonsMap[les]) lessonsMap[les] = { total: 0, learned: 0 };
       lessonsMap[les].total++;
-      if (w.repetition && w.repetition !== '0x') lessonsMap[les].learned++;
+      if (isWordLearned(w)) lessonsMap[les].learned++;
     });
 
     DOM.lessonsBreakdown.innerHTML = '';
@@ -1236,6 +1323,10 @@
             state.listSortBy = state.listSortBy === 'DE_ASC' ? 'DE_DESC' : 'DE_ASC';
           } else if (col === 'CZ') {
             state.listSortBy = state.listSortBy === 'CZ_ASC' ? 'CZ_DESC' : 'CZ_ASC';
+          } else if (col === 'STATUS') {
+            if (state.listSortBy === 'STATUS_PROBLEMATIC') state.listSortBy = 'STATUS_UNLEARNED';
+            else if (state.listSortBy === 'STATUS_UNLEARNED') state.listSortBy = 'STATUS_LEARNED';
+            else state.listSortBy = 'STATUS_PROBLEMATIC';
           } else if (col === 'REP') {
             state.listSortBy = state.listSortBy === 'REP_DESC' ? 'REP_ASC' : 'REP_DESC';
           }
@@ -1250,6 +1341,20 @@
     DOM.btnAddWord.addEventListener('click', openAddModal);
 
     DOM.vocabTableBody.addEventListener('click', (e) => {
+      const toggleLearnedBtn = e.target.closest('.btn-toggle-learned');
+      if (toggleLearnedBtn) {
+        const idx = parseInt(toggleLearnedBtn.dataset.index, 10);
+        toggleWordLearned(idx);
+        return;
+      }
+
+      const toggleProbBtn = e.target.closest('.btn-toggle-problematic');
+      if (toggleProbBtn) {
+        const idx = parseInt(toggleProbBtn.dataset.index, 10);
+        toggleWordProblematic(idx);
+        return;
+      }
+
       const editBtn = e.target.closest('.btn-edit');
       if (editBtn) {
         const idx = parseInt(editBtn.dataset.index, 10);
