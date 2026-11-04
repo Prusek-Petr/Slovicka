@@ -29,6 +29,8 @@
     // List Tab State
     searchQuery: '',
     listLessonFilter: 'ALL',
+    listStatusFilter: 'ALL',
+    listSortBy: 'DEFAULT',
   };
 
   // ==========================================================================
@@ -221,9 +223,12 @@
     // List Tab
     listSearchInput: document.getElementById('list-search-input'),
     listLessonFilter: document.getElementById('list-lesson-filter'),
+    listStatusFilter: document.getElementById('list-status-filter'),
+    listSortSelect: document.getElementById('list-sort-select'),
     btnAddWord: document.getElementById('btn-add-word'),
     listCounter: document.getElementById('list-counter'),
     vocabTableBody: document.getElementById('vocab-table-body'),
+    sortableHeaders: document.querySelectorAll('.sortable-th'),
     
     // Stats Tab
     statTotal: document.getElementById('stat-total'),
@@ -829,32 +834,120 @@
   // ==========================================================================
   // 5. VOCABULARY CRUD & LIST TAB MODULE
   // ==========================================================================
+  function cleanGermanForSort(str) {
+    if (!str) return '';
+    return str.trim().replace(/^(der|die|das)\s+/i, '').trim();
+  }
+
+  function updateSortHeaderIndicators() {
+    const indDE = document.getElementById('sort-ind-DE');
+    const indCZ = document.getElementById('sort-ind-CZ');
+    const indREP = document.getElementById('sort-ind-REP');
+
+    if (indDE) indDE.textContent = '';
+    if (indCZ) indCZ.textContent = '';
+    if (indREP) indREP.textContent = '';
+
+    const sort = state.listSortBy;
+    if (sort === 'DE_ASC' && indDE) indDE.textContent = '▲';
+    else if (sort === 'DE_DESC' && indDE) indDE.textContent = '▼';
+    else if (sort === 'CZ_ASC' && indCZ) indCZ.textContent = '▲';
+    else if (sort === 'CZ_DESC' && indCZ) indCZ.textContent = '▼';
+    else if ((sort === 'REP_ASC' || sort === 'STATUS_UNLEARNED') && indREP) indREP.textContent = '▲';
+    else if ((sort === 'REP_DESC' || sort === 'STATUS_LEARNED') && indREP) indREP.textContent = '▼';
+  }
+
   function renderTable() {
     const search = state.searchQuery.toLowerCase();
     const lessonFilter = state.listLessonFilter;
+    const statusFilter = state.listStatusFilter;
+    const sortBy = state.listSortBy;
 
-    const filtered = state.vocabulary.filter(item => {
+    updateSortHeaderIndicators();
+
+    // Map with original index so CRUD operations always reference exact state.vocabulary index
+    let entries = state.vocabulary.map((item, originalIndex) => ({ item, originalIndex }));
+
+    // 1. Filter by search, lesson, and learned status
+    entries = entries.filter(({ item }) => {
       const matchSearch = !search ||
         (item.german && item.german.toLowerCase().includes(search)) ||
         (item.czech && item.czech.toLowerCase().includes(search));
 
       const matchLesson = lessonFilter === 'ALL' || (item.lesson || 'Ostatní') === lessonFilter;
 
-      return matchSearch && matchLesson;
+      const reps = parseRepetitionCount(item.repetition);
+      let matchStatus = true;
+      if (statusFilter === 'UNLEARNED') {
+        matchStatus = reps === 0;
+      } else if (statusFilter === 'LEARNED') {
+        matchStatus = reps > 0;
+      }
+
+      return matchSearch && matchLesson && matchStatus;
     });
 
-    DOM.listCounter.textContent = `Zobrazeno ${filtered.length} z ${state.vocabulary.length} slovíček`;
+    // 2. Sort entries
+    if (sortBy !== 'DEFAULT') {
+      entries.sort((a, b) => {
+        const wA = a.item;
+        const wB = b.item;
+
+        if (sortBy === 'DE_ASC' || sortBy === 'DE_DESC') {
+          const cmp = cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de', { sensitivity: 'base' });
+          return sortBy === 'DE_ASC' ? cmp : -cmp;
+        }
+
+        if (sortBy === 'CZ_ASC' || sortBy === 'CZ_DESC') {
+          const cmp = (wA.czech || '').localeCompare(wB.czech || '', 'cs', { sensitivity: 'base' });
+          return sortBy === 'CZ_ASC' ? cmp : -cmp;
+        }
+
+        const repA = parseRepetitionCount(wA.repetition);
+        const repB = parseRepetitionCount(wB.repetition);
+
+        if (sortBy === 'REP_ASC') {
+          return repA !== repB ? repA - repB : cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+        }
+
+        if (sortBy === 'REP_DESC') {
+          return repA !== repB ? repB - repA : cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+        }
+
+        const learnedA = repA > 0 ? 1 : 0;
+        const learnedB = repB > 0 ? 1 : 0;
+
+        if (sortBy === 'STATUS_UNLEARNED') {
+          if (learnedA !== learnedB) return learnedA - learnedB;
+          if (repA !== repB) return repA - repB;
+          return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+        }
+
+        if (sortBy === 'STATUS_LEARNED') {
+          if (learnedA !== learnedB) return learnedB - learnedA;
+          if (repA !== repB) return repB - repA;
+          return cleanGermanForSort(wA.german).localeCompare(cleanGermanForSort(wB.german), 'de');
+        }
+
+        return 0;
+      });
+    }
+
+    DOM.listCounter.textContent = `Zobrazeno ${entries.length} z ${state.vocabulary.length} slovíček`;
     DOM.vocabTableBody.innerHTML = '';
 
-    filtered.forEach((item) => {
-      const originalIndex = state.vocabulary.indexOf(item);
+    entries.forEach(({ item, originalIndex }) => {
       const tr = document.createElement('tr');
+      const reps = parseRepetitionCount(item.repetition);
+      const isLearned = reps > 0;
+      const badgeClass = isLearned ? 'rep-badge rep-badge-learned' : 'rep-badge rep-badge-zero';
+      const statusTitle = isLearned ? 'Naučeno / Probráno' : 'Nenaučeno (0x)';
 
       tr.innerHTML = `
         <td style="font-weight:700; color:#fff;">${escapeHtml(item.german || '')}</td>
         <td style="color:var(--primary); font-style:italic;">${escapeHtml(item.pronunciation || '')}</td>
         <td style="font-weight:600; color:var(--secondary);">${escapeHtml(item.czech || '')}</td>
-        <td><span class="rep-badge">${escapeHtml(item.repetition || '0x')}</span></td>
+        <td><span class="${badgeClass}" title="${statusTitle}">${isLearned ? '✅ ' : '⏳ '}${escapeHtml(item.repetition || '0x')}</span></td>
         <td><span class="lesson-tag">${escapeHtml(item.lesson || 'Ostatní')}</span></td>
         <td>
           <div class="row-actions">
@@ -1120,6 +1213,39 @@
       state.listLessonFilter = e.target.value;
       renderTable();
     });
+
+    if (DOM.listStatusFilter) {
+      DOM.listStatusFilter.addEventListener('change', (e) => {
+        state.listStatusFilter = e.target.value;
+        renderTable();
+      });
+    }
+
+    if (DOM.listSortSelect) {
+      DOM.listSortSelect.addEventListener('change', (e) => {
+        state.listSortBy = e.target.value;
+        renderTable();
+      });
+    }
+
+    if (DOM.sortableHeaders) {
+      DOM.sortableHeaders.forEach(th => {
+        th.addEventListener('click', () => {
+          const col = th.dataset.sort;
+          if (col === 'DE') {
+            state.listSortBy = state.listSortBy === 'DE_ASC' ? 'DE_DESC' : 'DE_ASC';
+          } else if (col === 'CZ') {
+            state.listSortBy = state.listSortBy === 'CZ_ASC' ? 'CZ_DESC' : 'CZ_ASC';
+          } else if (col === 'REP') {
+            state.listSortBy = state.listSortBy === 'REP_DESC' ? 'REP_ASC' : 'REP_DESC';
+          }
+          if (DOM.listSortSelect) {
+            DOM.listSortSelect.value = state.listSortBy;
+          }
+          renderTable();
+        });
+      });
+    }
 
     DOM.btnAddWord.addEventListener('click', openAddModal);
 

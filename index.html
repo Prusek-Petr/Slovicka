@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="stylesheet" href="./style.css?v=3">
+  <link rel="stylesheet" href="./style.css?v=4">
 </head>
 <body>
 
@@ -190,9 +190,28 @@
         </div>
 
         <div class="toolbar-actions">
-          <select id="list-lesson-filter" class="custom-select">
+          <select id="list-lesson-filter" class="custom-select" title="Filtrovat podle lekce">
             <option value="ALL">Všechny lekce</option>
           </select>
+
+          <select id="list-status-filter" class="custom-select" title="Filtrovat podle stavu naučení">
+            <option value="ALL">Všechny stavy</option>
+            <option value="UNLEARNED">⏳ Nenaučeno (0x)</option>
+            <option value="LEARNED">✅ Naučeno (1x+)</option>
+          </select>
+
+          <select id="list-sort-select" class="custom-select" title="Třídit slovíčka">
+            <option value="DEFAULT">↕️ Výchozí pořadí</option>
+            <option value="DE_ASC">🔤 Německy (A → Z)</option>
+            <option value="DE_DESC">🔤 Německy (Z → A)</option>
+            <option value="CZ_ASC">🔤 Česky (A → Z)</option>
+            <option value="CZ_DESC">🔤 Česky (Z → A)</option>
+            <option value="REP_ASC">🔄 Opakování (nejméně → nejvíce)</option>
+            <option value="REP_DESC">🔄 Opakování (nejvíce → nejméně)</option>
+            <option value="STATUS_UNLEARNED">⏳ Stav (nenaučené první)</option>
+            <option value="STATUS_LEARNED">✅ Stav (naučené první)</option>
+          </select>
+
           <button id="btn-add-word" class="btn-primary">
             ➕ Přidat slovíčko
           </button>
@@ -207,10 +226,10 @@
         <table class="vocab-table">
           <thead>
             <tr>
-              <th>Německy</th>
+              <th class="sortable-th" data-sort="DE" title="Kliknutím seřadíte podle němčiny">Německy <span class="sort-indicator" id="sort-ind-DE"></span></th>
               <th>Výslovnost</th>
-              <th>Česky</th>
-              <th>Opakování</th>
+              <th class="sortable-th" data-sort="CZ" title="Kliknutím seřadíte podle češtiny">Česky <span class="sort-indicator" id="sort-ind-CZ"></span></th>
+              <th class="sortable-th" data-sort="REP" title="Kliknutím seřadíte podle počtu opakování">Opakování <span class="sort-indicator" id="sort-ind-REP"></span></th>
               <th>Lekce</th>
               <th>Akce</th>
             </tr>
@@ -394,6 +413,6 @@
   </div>
 
   <!-- Main JS -->
-  <script src="./app.js?v=3"></script>
+  <script src="./app.js?v=4"></script>
 </body>
 </html>
