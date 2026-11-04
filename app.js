@@ -434,11 +434,11 @@
       const subcategory = parts.slice(1).join(' - ').trim();
       return { category, subcategory, fullLesson: raw };
     }
-    const duoMatch = raw.match(/^(Duolingo)\s+(\d+.*)$/i);
+    const duoMatch = raw.match(/^(Duolingo)\s+(\d+)(.*)$/i);
     if (duoMatch) {
       return {
-        category: 'Duolingo',
-        subcategory: `Lekce ${duoMatch[2]}`,
+        category: parseInt(duoMatch[2], 10) > 50 ? 'Duolingo 3' : (parseInt(duoMatch[2], 10) > 25 ? 'Duolingo 2' : 'Duolingo 1'),
+        subcategory: `Lekce ${duoMatch[2]}${duoMatch[3] || ''}`,
         fullLesson: raw
       };
     }
@@ -609,7 +609,8 @@
       DOM.categoriesGrid.innerHTML = '';
 
       // Priority order: Duolingo, Základy, Úvodní lekce 1, then alphabetical
-      const priorityOrder = ['Duolingo', 'Základy', 'Úvodní lekce 1'];
+      // Priority order: Duolingo 1, 2, 3, Základy, Úvodní lekce 1, then alphabetical
+      const priorityOrder = ['Duolingo 1', 'Duolingo 2', 'Duolingo 3', 'Základy', 'Úvodní lekce 1'];
       const catKeys = Object.keys(hierarchy).sort((a, b) => {
         const idxA = priorityOrder.indexOf(a);
         const idxB = priorityOrder.indexOf(b);
