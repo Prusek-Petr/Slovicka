@@ -5764,10 +5764,12 @@
     "pronunciation": "kórnr",
     "czech": "roh",
     "story": "Do každého ROHU vašeho bytu jste si přilepili velikánský KORNout se zmrzlinou.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "17.11.2026",
     "date_learned": "21.1.2023",
-    "lesson": "Bydlení 1 - Lekce 2"
+    "lesson": "Bydlení 1 - Lekce 2",
+    "learned": true,
+    "last_reviewed_ts": 1794922009677
   },
   {
     "english": "corporation",
@@ -9576,10 +9578,12 @@
     "pronunciation": "flór",
     "czech": "podlaha",
     "story": "Uklízečka čistí PODLAHU zubní pastou FLÓRka.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "17.11.2026",
     "date_learned": "21.1.2023",
-    "lesson": "Bydlení 1 - Lekce 2"
+    "lesson": "Bydlení 1 - Lekce 2",
+    "learned": true,
+    "last_reviewed_ts": 1794922010327
   },
   {
     "english": "floor",
@@ -10186,10 +10190,12 @@
     "pronunciation": "gárdn",
     "czech": "zahrada",
     "story": "Představte si, že na sousedově ZAHRADĚ leží kocour GARfield a čte si DeNík.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "17.11.2026",
     "date_learned": "21.1.2023",
-    "lesson": "Bydlení 1 - Lekce 2"
+    "lesson": "Bydlení 1 - Lekce 2",
+    "learned": true,
+    "last_reviewed_ts": 1794922010860
   },
   {
     "english": "garlic",
@@ -24088,10 +24094,12 @@
     "pronunciation": "tejbl",
     "czech": "stůl",
     "story": "Každý správný STŮL má v sobě zabudovaný TABLEt.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "17.11.2026",
     "date_learned": "21.1.2023",
-    "lesson": "Bydlení 1 - Lekce 2"
+    "lesson": "Bydlení 1 - Lekce 2",
+    "learned": true,
+    "last_reviewed_ts": 1794922011444
   },
   {
     "english": "tablecloth",
