@@ -4,20 +4,24 @@
     "pronunciation": "hunt",
     "czech": "pes",
     "story": "-",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "3x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "2024-05-01",
-    "lesson": "Základy - Lekce 1"
+    "lesson": "Základy - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1794611928666
   },
   {
     "german": "Katze",
     "pronunciation": "kace",
     "czech": "kočka",
     "story": "-",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "2x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "2024-05-01",
-    "lesson": "Základy - Lekce 1"
+    "lesson": "Základy - Lekce 1",
+    "learned": true,
+    "last_reviewed_ts": 1794611927683
   },
   {
     "german": "das Obst (-[e]s, 0)",
@@ -105,9 +109,11 @@
     "czech": "until when, by when, up to when",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Duolingo 1"
+    "lesson": "Duolingo 1",
+    "learned": false,
+    "last_reviewed_ts": 1794612169128
   },
   {
     "german": "bis",
@@ -115,9 +121,11 @@
     "czech": "until, till, 'til",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Duolingo 1"
+    "lesson": "Duolingo 1",
+    "learned": false,
+    "last_reviewed_ts": 1794612177080
   },
   {
     "german": "geöffnet",
@@ -125,9 +133,11 @@
     "czech": "open",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Duolingo 1"
+    "lesson": "Duolingo 1",
+    "learned": false,
+    "last_reviewed_ts": 1794612181396
   },
   {
     "german": "die Eintrittskarte",
@@ -135,9 +145,11 @@
     "czech": "admission ticket, [admission/entry/entrance] [ticket/pass/card]",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Duolingo 1"
+    "lesson": "Duolingo 1",
+    "learned": false,
+    "last_reviewed_ts": 1794612190943
   },
   {
     "german": "wann",
@@ -3766,60 +3778,72 @@
     "pronunciation": "rót",
     "czech": "červený",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794611959157
   },
   {
     "german": "blau",
     "pronunciation": "blau",
     "czech": "modrý",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794611963192
   },
   {
     "german": "grün",
     "pronunciation": "grün",
     "czech": "zelený",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794611970725
   },
   {
     "german": "gelb",
     "pronunciation": "gelp",
     "czech": "žlutý",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612095884
   },
   {
     "german": "schwarz",
     "pronunciation": "švarc",
     "czech": "černý",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794611987020
   },
   {
     "german": "weiß",
     "pronunciation": "vajs",
     "czech": "bílý",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794611988749
   },
   {
     "german": "der Kopf",
@@ -3827,9 +3851,11 @@
     "czech": "hlava",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": false,
+    "last_reviewed_ts": 1794612107462
   },
   {
     "german": "das Auge",
@@ -3837,9 +3863,11 @@
     "czech": "oko",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": false,
+    "last_reviewed_ts": 1794612111711
   },
   {
     "german": "das Ohr",
@@ -3847,69 +3875,83 @@
     "czech": "ucho",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": false,
+    "last_reviewed_ts": 1794612116136
   },
   {
     "german": "die Hand",
     "pronunciation": "hant",
     "czech": "ruka",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612017779
   },
   {
     "german": "der Fuß",
     "pronunciation": "fús",
     "czech": "noha, chodidlo",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612023593
   },
   {
     "german": "das Haus",
     "pronunciation": "haus",
     "czech": "dům",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612027357
   },
   {
     "german": "das Auto",
     "pronunciation": "au-to",
     "czech": "auto",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612028807
   },
   {
     "german": "die Straße",
     "pronunciation": "štrá-se",
     "czech": "ulice",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612030983
   },
   {
     "german": "der Platz",
     "pronunciation": "plac",
     "czech": "náměstí, místo",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612032632
   },
   {
     "german": "die Tür",
@@ -3917,88 +3959,106 @@
     "czech": "dveře",
     "story": "",
     "repetition": "0x",
-    "last_reviewed": "-",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": false,
+    "last_reviewed_ts": 1794612120687
   },
   {
     "german": "das Fenster",
     "pronunciation": "fen-ster",
     "czech": "okno",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612043882
   },
   {
     "german": "das Buch",
     "pronunciation": "búch",
     "czech": "kniha",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612046451
   },
   {
     "german": "lesen",
     "pronunciation": "lé-zen",
     "czech": "číst",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612049927
   },
   {
     "german": "schreiben",
     "pronunciation": "šraj-ben",
     "czech": "psát",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612053276
   },
   {
     "german": "hören",
     "pronunciation": "hö-ren",
     "czech": "slyšet",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612056262
   },
   {
     "german": "sehen",
     "pronunciation": "zé-en",
     "czech": "vidět",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612059059
   },
   {
     "german": "fragen",
     "pronunciation": "frá-gen",
     "czech": "ptát se",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612062408
   },
   {
     "german": "antworten",
     "pronunciation": "ant-vor-ten",
     "czech": "odpovídat",
     "story": "",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "14.11.2026",
     "date_learned": "-",
-    "lesson": "Základy - Extra slovíčka A1"
+    "lesson": "Základy - Extra slovíčka A1",
+    "learned": true,
+    "last_reviewed_ts": 1794612068050
   }
 ]
