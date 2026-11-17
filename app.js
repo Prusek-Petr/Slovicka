@@ -105,12 +105,18 @@
       const defPath = this.getDefaultPath();
       try {
         const stored = localStorage.getItem(STORAGE_CONFIG_KEY);
-        if (!stored) return { owner: '', repo: '', path: defPath, pat: '' };
+        if (!stored) return { owner: 'Prusek-Petr', repo: 'Slovicka', path: defPath, pat: '' };
         const parsed = JSON.parse(stored);
+        if (!parsed.owner || parsed.owner.toLowerCase() === 'petrprusek') {
+          parsed.owner = 'Prusek-Petr';
+        }
+        if (!parsed.repo) {
+          parsed.repo = 'Slovicka';
+        }
         parsed.path = this.getActivePath(parsed);
         return parsed;
       } catch (e) {
-        return { owner: '', repo: '', path: defPath, pat: '' };
+        return { owner: 'Prusek-Petr', repo: 'Slovicka', path: defPath, pat: '' };
       }
     },
 
@@ -187,7 +193,20 @@
         }
 
         const data = await response.json();
-        const jsonText = this.base64ToUtf8(data.content);
+        let b64Content = data.content;
+        if (!b64Content && data.git_url) {
+          const blobRes = await fetch(data.git_url, {
+            headers: {
+              'Authorization': this.getAuthHeader(cfg.pat),
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          if (blobRes.ok) {
+            const blobData = await blobRes.json();
+            b64Content = blobData.content;
+          }
+        }
+        const jsonText = this.base64ToUtf8(b64Content);
         const content = JSON.parse(jsonText);
 
         return { content, sha: data.sha, isGitHub: true };
@@ -201,10 +220,25 @@
 
     async fetchLocalFallback() {
       const file = this.getDefaultPath();
-      const response = await fetch(`./${file}`);
+      const response = await fetch(`./${file}?t=${Date.now()}`);
       if (!response.ok) throw new Error(`Nepodařilo se načíst místní soubor ${file}`);
       const content = await response.json();
       return { content, sha: null, isGitHub: false };
+    },
+
+    async fetchLatestSha(cfg) {
+      const getUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}?t=${Date.now()}`;
+      const getRes = await fetch(getUrl, {
+        headers: {
+          'Authorization': this.getAuthHeader(cfg.pat),
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      if (getRes.ok) {
+        const getData = await getRes.json();
+        return getData.sha;
+      }
+      return null;
     },
 
     async saveFile(vocabularyData, commitMessage = 'Update vocabulary progress [auto-save]') {
@@ -213,41 +247,42 @@
         throw new Error('Chybí konfigurace GitHub API. Zadejte PAT token a repo v nastavení.');
       }
 
-      // If SHA is missing, fetch current file SHA first
-      let currentSha = state.fileSha;
       const getUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
-      
+      let currentSha = state.fileSha;
       if (!currentSha) {
-        const getRes = await fetch(getUrl, {
-          headers: {
-            'Authorization': this.getAuthHeader(cfg.pat),
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-        if (getRes.ok) {
-          const getData = await getRes.json();
-          currentSha = getData.sha;
-        }
+        currentSha = await this.fetchLatestSha(cfg);
       }
 
       const jsonString = JSON.stringify(vocabularyData, null, 2);
       const base64Content = this.utf8ToBase64(jsonString);
 
-      const putBody = {
-        message: commitMessage,
-        content: base64Content,
-        sha: currentSha
+      const sendPut = async (shaToUse) => {
+        return await fetch(getUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': this.getAuthHeader(cfg.pat),
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: commitMessage,
+            content: base64Content,
+            sha: shaToUse
+          })
+        });
       };
 
-      const putRes = await fetch(getUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': this.getAuthHeader(cfg.pat),
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(putBody)
-      });
+      let putRes = await sendPut(currentSha);
+
+      // If SHA was outdated (e.g. modified on PC while phone had tab open), fetch fresh SHA and retry once
+      if (putRes.status === 409 || putRes.status === 422) {
+        console.warn('[GitHubAPI] SHA conflict detected, fetching fresh SHA and retrying...');
+        const freshSha = await this.fetchLatestSha(cfg);
+        if (freshSha) {
+          currentSha = freshSha;
+          putRes = await sendPut(currentSha);
+        }
+      }
 
       if (!putRes.ok) {
         const errData = await putRes.json().catch(() => ({}));
@@ -442,6 +477,7 @@
 
   async function loadVocabulary() {
     updateSyncBadge('syncing', 'Načítám...');
+    const backupKey = `captain_vocab_backup_${state.currentLang}`;
 
     try {
       const res = await GitHubAPI.fetchFile();
@@ -449,13 +485,38 @@
       state.fileSha = res.sha;
       state.isGitHubSynced = res.isGitHub;
 
-      if (res.isGitHub) {
-        updateSyncBadge('online', 'Uloženo (GitHub)');
-      } else {
-        updateSyncBadge('offline', 'Místní JSON (Read Only)');
+      // Check if there are unsaved local changes from a previous session on this device
+      const rawBackup = localStorage.getItem(backupKey);
+      if (rawBackup) {
+        try {
+          const parsedBackup = JSON.parse(rawBackup);
+          if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
+            console.log(`[Init] Restoring unsaved local backup (${parsedBackup.length} words) for ${state.currentLang}`);
+            state.vocabulary = parsedBackup;
+            state.hasPendingChanges = true;
+          }
+        } catch (backupErr) {
+          console.warn('[Init] Invalid local backup ignored:', backupErr);
+        }
       }
 
       refreshAllViews();
+
+      if (state.hasPendingChanges) {
+        if (GitHubAPI.hasValidConfig() && navigator.onLine) {
+          await forceSyncToGitHub(`Synchronizace neuložených změn (${state.currentLang.toUpperCase()})`);
+        } else if (!GitHubAPI.hasValidConfig()) {
+          updateSyncBadge('error', 'Chybí token ⚙️ (Uloženo v mobilu)');
+        } else {
+          updateSyncBadge('offline', 'Offline (Čeká na uložení)');
+        }
+      } else if (res.isGitHub) {
+        updateSyncBadge('online', 'Uloženo (GitHub)');
+      } else if (res.warning) {
+        updateSyncBadge('error', 'Chyba tokenu ⚙️');
+      } else {
+        updateSyncBadge('offline', 'Nastav token ⚙️');
+      }
     } catch (err) {
       console.error('[Init] Fatal error loading vocabulary:', err);
       updateSyncBadge('error', 'Chyba načítání');
@@ -489,20 +550,20 @@
       console.warn('Nelze uložit lokální zálohu:', e);
     }
 
+    state.hasPendingChanges = true;
+
     if (!GitHubAPI.hasValidConfig()) {
-      updateSyncBadge('offline', 'Místní (Neukládá na GitHub)');
+      updateSyncBadge('error', 'Chybí token ⚙️ (Uloženo v mobilu)');
       return;
     }
 
     if (!navigator.onLine) {
-      updateSyncBadge('offline', 'Offline (Uloženo lokálně)');
-      state.hasPendingChanges = true;
+      updateSyncBadge('offline', 'Offline (Uloženo v mobilu)');
       return;
     }
 
-    // 2. Set pending state and debounce
-    state.hasPendingChanges = true;
-    updateSyncBadge('syncing', 'Změny čekají (8s)...');
+    // 2. Set pending state and short 2s debounce for mobile responsiveness
+    updateSyncBadge('syncing', 'Ukládám (2s)...');
 
     if (state.syncTimer) {
       clearTimeout(state.syncTimer);
@@ -510,12 +571,12 @@
 
     state.syncTimer = setTimeout(() => {
       forceSyncToGitHub(message);
-    }, 8000);
+    }, 2000);
   }
 
   async function forceSyncToGitHub(message = 'Update vocabulary progress [auto-save]') {
     if (!GitHubAPI.hasValidConfig()) {
-      updateSyncBadge('offline', 'Místní (Neukládá na GitHub)');
+      updateSyncBadge('error', 'Chybí token ⚙️ (Uloženo v mobilu)');
       return;
     }
 
@@ -524,8 +585,12 @@
       return;
     }
 
-    if (state.isSaving) return;
+    if (state.isSaving) {
+      state.needsResaveAfterCurrent = true;
+      return;
+    }
     state.isSaving = true;
+    state.needsResaveAfterCurrent = false;
     
     // Clear the timer if it was triggered manually
     if (state.syncTimer) {
@@ -546,6 +611,10 @@
       alert(`Chyba při ukládání na GitHub: ${err.message}`);
     } finally {
       state.isSaving = false;
+      if (state.needsResaveAfterCurrent) {
+        state.needsResaveAfterCurrent = false;
+        forceSyncToGitHub('Dodatečné uložení změn');
+      }
     }
   }
 
@@ -1919,10 +1988,29 @@
       }
     });
 
-    // Settings Modal
+    // Settings Modal & Sync Badge
     DOM.syncStatus.addEventListener('click', () => {
-      if (state.hasPendingChanges && navigator.onLine) {
+      if (!GitHubAPI.hasValidConfig()) {
+        populateSettingsForm();
+        DOM.settingsStatusMsg.style.display = 'none';
+        openModal(DOM.modalSettings);
+        return;
+      }
+      if (navigator.onLine) {
         forceSyncToGitHub('Ruční synchronizace změn');
+      }
+    });
+
+    // Flush pending changes immediately when locking phone / switching apps / coming back online
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && state.hasPendingChanges && GitHubAPI.hasValidConfig() && navigator.onLine) {
+        forceSyncToGitHub('Auto-save při uspání aplikace');
+      }
+    });
+
+    window.addEventListener('online', () => {
+      if (state.hasPendingChanges && GitHubAPI.hasValidConfig()) {
+        forceSyncToGitHub('Synchronizace po obnovení připojení');
       }
     });
 
