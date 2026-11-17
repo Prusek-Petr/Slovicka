@@ -27100,10 +27100,12 @@
     "pronunciation": "wyndou",
     "czech": "okno",
     "story": "Na všechna OKNA ve vaší firmě společnost Microsoft nalepila ikonku nových WINDOWs 10.",
-    "repetition": "0x",
-    "last_reviewed": "-",
+    "repetition": "1x",
+    "last_reviewed": "17.11.2026",
     "date_learned": "21.1.2023",
-    "lesson": "Bydlení 1 - Lekce 2"
+    "lesson": "Bydlení 1 - Lekce 2",
+    "learned": true,
+    "last_reviewed_ts": 1794922016804
   },
   {
     "english": "windy",
